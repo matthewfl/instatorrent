@@ -6,8 +6,10 @@ OBJ= $(SRC:.cc=.o)
 
 FLAGS= -std=c++11
 
-INCLUDE= $(shell pkg-config fuse --cflags)
-LIB= $(shell pkg-config fuse --libs --static) -lpthread
+TORRENT=deps/lib/libtorrent-rasterbar.a
+
+INCLUDE= $(shell pkg-config fuse --cflags) -Ideps/include
+LIB= $(shell pkg-config fuse --libs --static) $(TORRENT)
 
 LD= g++
 CXX= g++
@@ -20,7 +22,8 @@ clean:
 	rm -f $(TARGET) $(OBJ)
 
 clean-all: clean
-	cd lib/uv && make clean
+	cd lib/libtorrent && make clean
+	rm -rf lib/lib lib/include
 
 run: $(TARGET)
 	mkdir -p /tmp/torr
@@ -28,8 +31,15 @@ run: $(TARGET)
 	mkdir -p /tmp/torr-watch
 	./$(TARGET) /tmp/torr /tmp/torr-target /tmp/torr-watch
 
-$(TARGET): $(OBJ)
+$(TARGET): $(OBJ) $(TORRENT)
 	$(LD) $(FLAGS) -o $(TARGET) $(OBJ) $(LIB)
 
 .cc.o:
 	$(CXX) $(FLAGS) $(INCLUDE) -o $@ -c $<
+
+
+$(TORRENT): $(wildcard lib/libtorrent/include/*)
+	cd deps/libtorrent && make clean
+	cd deps/libtorrent && ./configure --prefix=`pwd`/../
+	cd deps/libtorrent && make
+	cd deps/libtorrent && make install

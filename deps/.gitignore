@@ -1,0 +1,11 @@
+Makefile
+*.lo
+.deps/
+config.log
+config.report
+config.status
+.libs/
+*.la
+libtool
+include/
+lib/

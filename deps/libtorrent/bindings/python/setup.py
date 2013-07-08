@@ -6,7 +6,7 @@ import os
 import platform
 import sys
 
-if '-lboost_python-mt' == '':
+if '' == '':
 	print('You need to pass --enable-python-binding to configure in order '),
 	print('to properly use this setup. There is no boost.python library configured now')
 	sys.exit(1)
@@ -64,7 +64,7 @@ if "OPT" in config_vars and "-Wstrict-prototypes" in config_vars["OPT"]:
 source_list = os.listdir(os.path.join(os.path.dirname(__file__), "src"))
 source_list = [os.path.join("src", s) for s in source_list if s.endswith(".cpp")]
 
-extra_cmd = ' -DTORRENT_USE_OPENSSL  -DWITH_SHIPPED_GEOIP_H  -DBOOST_ASIO_HASH_MAP_BUCKETS=1021  -DBOOST_EXCEPTION_DISABLE  -DBOOST_ASIO_ENABLE_CANCELIO  -DBOOST_ASIO_DYN_LINK -DTORRENT_LINKING_SHARED  -I/opt/local/include    -lboost_system-mt -lboost_python-mt  -lssl -lcrypto   -L/opt/local/lib   -I/opt/local/include  '
+extra_cmd = ' -DTORRENT_USE_OPENSSL  -DWITH_SHIPPED_GEOIP_H  -DBOOST_ASIO_HASH_MAP_BUCKETS=1021  -DBOOST_EXCEPTION_DISABLE  -DBOOST_ASIO_ENABLE_CANCELIO  -DBOOST_ASIO_DYN_LINK -DTORRENT_LINKING_SHARED  -I/usr/include  -lpthread   -lboost_system  -lpthread  -lssl -lcrypto   '
 
 setup( name='python-libtorrent',
 	version='0.16.10',
@@ -80,7 +80,7 @@ setup( name='python-libtorrent',
 		language='c++',
 		include_dirs = ['../../include'] + parse_cmd(extra_cmd, '-I'),
 		library_dirs = ['../../src/.libs'] + parse_cmd(extra_cmd, '-L'),
-		extra_link_args = '-L/opt/local/lib '.split() + arch(),
+		extra_link_args = '-L/usr/lib '.split() + arch(),
 		extra_compile_args = parse_cmd(extra_cmd, '-D', True) + arch(),
 		libraries = ['torrent-rasterbar'] + parse_cmd(extra_cmd, '-l'))],
 )
