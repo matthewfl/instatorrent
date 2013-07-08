@@ -106,13 +106,14 @@ static struct fuse_lowlevel_ops manager_ll_oper = {
   NULL	// fallocate
 };
 
-Fuse::Fuse(int _argc, char **_argv) : argc(_argc), argv(_argv) {
+Fuse::Fuse(int _argc, const char **_argv) : argc(_argc), argv(const_cast<char**>(_argv)) {
   assert(!Fuse_manager);
   Fuse_manager = this;
 
 }
 
 int Fuse::Start() {
+  assert(argc);
 
   struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
   struct fuse_chan *ch;

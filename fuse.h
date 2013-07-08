@@ -25,7 +25,8 @@ private:
   int argc;
   char **argv;
 public:
-  Fuse(int _argc, char **_argv);
+  Fuse(int _argc, const char **_argv);
+  Fuse():argc(0) {}
   int Start();
 };
 
