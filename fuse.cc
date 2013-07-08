@@ -8,23 +8,56 @@ static Fuse *Fuse_manager;
 
 
 static void manager_lookup(fuse_req_t req, fuse_ino_t parent, const char *name) {
+  cerr << "fuse lookup "<< name << endl;
+  struct fuse_entry_param e;
 
+  if (parent != 1) { // || strcmp(name, hello_name) != 0)
+    fuse_reply_err(req, ENOENT);
+  } else {
+    memset(&e, 0, sizeof(e));
+    e.ino = 2;
+    e.attr_timeout = 1.0;
+    e.entry_timeout = 1.0;
+    e.attr.st_mode = S_IFREG | 0444;
+    e.attr.st_nlink = 1;
+    e.attr.st_size = 0; //strlen);
+    //hello_stat(e.ino, &e.attr);
+
+    fuse_reply_entry(req, &e);
+  }
 }
 
 static void manager_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi) {
+  cerr << "fuse getattr \n";
 
+  struct stat stbuf;
+
+  (void) fi;
+
+  memset(&stbuf, 0, sizeof(stbuf));
+  stbuf.st_mode = S_IFDIR | 0555;
+  stbuf.st_nlink = 2;
+
+  fuse_reply_attr(req, &stbuf, 1.0);
+
+  /*
+  if (hello_stat(ino, &stbuf) == -1)
+    fuse_reply_err(req, ENOENT);
+  else
+    fuse_reply_attr(req, &stbuf, 1.0);
+  */
 }
 
 static void manager_readdir(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off, struct fuse_file_info *fi) {
-
+  cerr << "fuse readdir \n";
 }
 
 static void manager_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi) {
-
+  cerr << "fuse open\n";
 }
 
 static void manager_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off, struct fuse_file_info *fi) {
-
+  cerr << "fuse read\n";
 }
 
 
@@ -70,7 +103,7 @@ static struct fuse_lowlevel_ops manager_ll_oper = {
   NULL, // retreive_reply
   NULL, // forget_multi
   NULL, // flock
-  NULL  // fallocate
+  NULL	// fallocate
 };
 
 Fuse::Fuse(int _argc, char **_argv) : argc(_argc), argv(_argv) {

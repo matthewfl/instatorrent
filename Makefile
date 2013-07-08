@@ -7,7 +7,7 @@ OBJ= $(SRC:.cc=.o)
 FLAGS= -std=c++11
 
 INCLUDE= $(shell pkg-config fuse --cflags)
-LIB= $(shell pkg-config fuse --libs)
+LIB= $(shell pkg-config fuse --libs --static)
 
 LD= g++
 CXX= g++
@@ -21,7 +21,7 @@ clean:
 
 run: $(TARGET)
 	mkdir -p /tmp/torr
-	./$(TARGET) -f -o auto_umount /tmp/torr
+	./$(TARGET) -f /tmp/torr
 
 $(TARGET): $(OBJ)
 	$(LD) $(FLAGS) -o $(TARGET) $(LIB) $(OBJ)
