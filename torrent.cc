@@ -4,12 +4,21 @@
 #include <iostream>
 using namespace std;
 
+using namespace libtorrent;
 
-Torrent::Torrent(char *_target_dir, char *_watch_dir) : target_dir(_target_dir), watch_dir(_watch_dir) {
+Torrents::Torrents(char *_target_dir, char *_watch_dir) : target_dir(_target_dir), watch_dir(_watch_dir) {
 
 }
 
 
-void Torrent::Start() {
+void Torrents::Start() {
   cerr << "torrent downloader starting\n";
+
+  //  torrent.info = torrent_info("
+
+}
+
+
+Torrents::Torrent::Torrent() : info ("testing.torrent") {
+
 }

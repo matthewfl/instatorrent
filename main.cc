@@ -20,13 +20,15 @@ int main(int argc, char **argv) {
 
   Fuse fuse (argv[1], argv[2]);
 
-  Torrent torrent(argv[2], argv[3]);
+  Torrents torrent(argv[2], argv[3]);
 
   thread downloader ([&torrent]() {
       torrent.Start();
     });
 
   fuse.Start();
+
+  // torrent.Stop();
 
   downloader.join();
 
