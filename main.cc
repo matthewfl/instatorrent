@@ -2,11 +2,11 @@
 
 #include "fuse.h"
 
+#include <thread>
+
 
 using namespace std;
 
-
-Fuse f;
 
 
 int main(int argc, char **argv) {
@@ -16,12 +16,10 @@ int main(int argc, char **argv) {
       return 1;
   }
 
-  const char *fuse_argv[2];
-  fuse_argv[0] = "-f";
-  fuse_argv[1] = argv[1];
-  f = Fuse(2, fuse_argv);
 
-  f.Start();
+  Fuse fuse (argv[1], argv[2]);
+
+  fuse.Start();
 
 
   return 0;
