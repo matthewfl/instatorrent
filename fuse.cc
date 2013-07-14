@@ -20,6 +20,26 @@ static void manager_lookup(fuse_req_t req, fuse_ino_t parent_ino, const char *na
     return;
   }
 
+  Fuse::fileInfo *file = parent->files[name];
+  if(!file) {
+    fuse_reply_err(req, ENOENT);
+    return;
+  }
+
+  cerr << "--lookup " << file->name << " " << file->type << endl;
+
+  memset(&e, 0, sizeof(e));
+  e.ino = file->inode;
+  e.attr_timeout = 1.0;
+  e.entry_timeout = 1.0;
+  e.attr.st_mode = 0444 | (file->type == Fuse::fileInfo::FILE ? S_IFREG : S_IFDIR);
+  e.attr.st_nlink = 2;
+  e.attr.st_size = 0; //strlen); // TODO: give the file size
+
+  fuse_reply_entry(req, &e);
+  return;
+
+
   //if (parent != 1) { // || strcmp(name, hello_name) != 0)
   //  fuse_reply_err(req, ENOENT);
   //} else {
@@ -27,7 +47,7 @@ static void manager_lookup(fuse_req_t req, fuse_ino_t parent_ino, const char *na
     e.ino = 2;
     e.attr_timeout = 1.0;
     e.entry_timeout = 1.0;
-    e.attr.st_mode = S_IFREG | 0444;
+    e.attr.st_mode = S_IFDIR | 0444;
     e.attr.st_nlink = 1;
     e.attr.st_size = 0; //strlen);
     //hello_stat(e.ino, &e.attr);
@@ -58,10 +78,11 @@ static void manager_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_inf
 }
 
 static void manager_readdir(fuse_req_t req, fuse_ino_t ino, size_t size_limit, off_t off, struct fuse_file_info *fi) {
-  cerr << "fuse readdir " << size_limit << " " << off << " " << (off == 0) << endl;
+  cerr << "fuse readdir " << size_limit << " " << off << " " << ino << endl;
 
   cerr << "before lookup";
   Fuse::fileInfo *dir = Fuse_manager->lookupInode(ino);
+  assert(dir);
 
   if(off == 0) {
     // refresh the files list
@@ -89,6 +110,7 @@ static void manager_readdir(fuse_req_t req, fuse_ino_t ino, size_t size_limit, o
       }else{
 	child->access = true;
       }
+      cerr << "\n looking at " << dirEntry.d_name << " type:" << (int)dirEntry.d_type;
       child->type = dirEntry.d_type == DT_DIR ? Fuse::fileInfo::DIRECTORY : Fuse::fileInfo::FILE;
     }
     closedir(handle);
@@ -304,7 +326,7 @@ Fuse::fileInfo* Fuse::newInode(fileInfo *parent) {
 
 Fuse::fileInfo* Fuse::lookupInode(fuse_ino_t ino) {
   //assert(ino < inode_count);
-  if(ino >= inode_count) return NULL;
+  if(ino > inode_count) return NULL;
   return inoMap[ino];
 }
 
