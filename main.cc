@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "fuse.h"
+#include "torrent.h"
 
 #include <thread>
 
@@ -19,8 +20,15 @@ int main(int argc, char **argv) {
 
   Fuse fuse (argv[1], argv[2]);
 
+  Torrent torrent(argv[2], argv[3]);
+
+  thread downloader ([&torrent]() {
+      torrent.Start();
+    });
+
   fuse.Start();
 
+  downloader.join();
 
   return 0;
 }

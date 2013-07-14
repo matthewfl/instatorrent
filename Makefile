@@ -1,6 +1,6 @@
 TARGET= tor-runner
 
-SRC= main.cc fuse.cc
+SRC= main.cc fuse.cc torrent.cc
 
 OBJ= $(SRC:.cc=.o)
 
@@ -8,8 +8,11 @@ FLAGS= -std=c++11
 
 TORRENT=deps/lib/libtorrent-rasterbar.a
 
-INCLUDE= $(shell pkg-config fuse --cflags) -Ideps/include
-LIB= $(shell pkg-config fuse --libs --static) $(TORRENT)
+INCLUDE= $(shell pkg-config fuse --cflags) $(shell pkg-config libtorrent-rasterbar --cflags --static)
+#-Ideps/include
+LIB= $(shell pkg-config fuse --libs --static) $(shell pkg-config libtorrent-rasterbar --libs --static)
+#$(TORRENT) -lboost_system -lpthread -lssl -lcrypto
+#-lboost_system
 
 LD= g++
 CXX= g++

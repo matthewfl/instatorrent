@@ -84,6 +84,7 @@ static void manager_readdir(fuse_req_t req, fuse_ino_t ino, size_t size_limit, o
   Fuse::fileInfo *dir = Fuse_manager->lookupInode(ino);
   assert(dir);
 
+  // TODO: move this into opendir
   if(off == 0) {
     // refresh the files list
     size_t bytes = 0;
@@ -204,10 +205,28 @@ static void manager_readdir(fuse_req_t req, fuse_ino_t ino, size_t size_limit, o
 
 static void manager_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi) {
   cerr << "fuse open\n";
+  Fuse::fileInfo *file = Fuse_manager->lookupInode(ino);
+  if(!file) {
+    fuse_reply_err(req, EISDIR);
+    return;
+  }
+  if((fi->flags & 3) != O_RDONLY) {
+    fuse_reply_err(req, EACCES);
+    return;
+  }
+  fi->fh = (uint64_t)file;
+  fuse_reply_open(req, fi);
 }
 
 static void manager_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off, struct fuse_file_info *fi) {
-  cerr << "fuse read\n";
+  cerr << "fuse read " << size << " " << off << endl;
+  Fuse::fileInfo *file = (Fuse::fileInfo*) fi->fh;
+  file->lock.lock();
+
+
+
+
+  file->lock.unlock();
 }
 
 
@@ -226,7 +245,7 @@ static struct fuse_lowlevel_ops manager_ll_oper = {
   NULL, // rmdir
   NULL, // symlink
   NULL, // rename
-  NULL, // link
+  NULL, // linkbmap
   manager_open, // open
   manager_read, // read
   NULL, // write
@@ -262,6 +281,7 @@ Fuse::Fuse(char *_fuse_dir, char *_target_dir): fuse_dir(_fuse_dir), target_dir(
   fileInfo* root = inoMap[1] = new fileInfo;
   root->inode = 1;
   root->name = target_dir;
+  assert(sizeof(uint64_t) >= sizeof(void*));
 }
 
 int Fuse::Start() {
