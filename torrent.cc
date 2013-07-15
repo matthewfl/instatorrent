@@ -27,12 +27,17 @@ void Torrents::Start() {
   // peer exchange
   session.add_extension(&libtorrent::create_ut_pex_plugin);
 
-  //  torrent.info = torrent_info("
+  session.start_dht();
+  session.start_lsd();
+  session.start_natpmp();
+  session.start_upnp();
+
 
   while(running) {
     torrent_status stat = torrent.handle.status();
 
-    cerr << "progress:" << stat.progress << " trac:" << stat.current_tracker << " peers:" << stat.num_peers << endl;
+    cerr << "progress:" << stat.progress << " trac:" << stat.current_tracker << " connected:" << stat.num_peers
+	 << " cons:" << stat.num_connections << " seeds:" << stat.num_seeds <<  endl;
     sleep(1000);
   }
 

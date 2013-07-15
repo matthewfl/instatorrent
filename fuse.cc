@@ -40,26 +40,10 @@ static void manager_lookup(fuse_req_t req, fuse_ino_t parent_ino, const char *na
   e.entry_timeout = 1.0;
   e.attr.st_mode = 0444 | (file->type == Fuse::fileInfo::FILE ? S_IFREG : S_IFDIR);
   e.attr.st_nlink = 2;
-  e.attr.st_size = 0; //strlen); // TODO: give the file size
+  e.attr.st_size = file->file_size;
 
   fuse_reply_entry(req, &e);
-  return;
 
-
-  //if (parent != 1) { // || strcmp(name, hello_name) != 0)
-  //  fuse_reply_err(req, ENOENT);
-  //} else {
-    memset(&e, 0, sizeof(e));
-    e.ino = 2;
-    e.attr_timeout = 1.0;
-    e.entry_timeout = 1.0;
-    e.attr.st_mode = S_IFDIR | 0444;
-    e.attr.st_nlink = 1;
-    e.attr.st_size = 0; //strlen);
-    //hello_stat(e.ino, &e.attr);
-
-    fuse_reply_entry(req, &e);
-    //  }
 }
 
 static void manager_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi) {
@@ -121,6 +105,12 @@ static void manager_readdir(fuse_req_t req, fuse_ino_t ino, size_t size_limit, o
       }
       cerr << "\n looking at " << dirEntry.d_name << " type:" << (int)dirEntry.d_type;
       child->type = dirEntry.d_type == DT_DIR ? Fuse::fileInfo::DIRECTORY : Fuse::fileInfo::FILE;
+
+      if(child->type == Fuse::fileInfo::FILE) {
+	struct stat stats;
+	stat(child->getPath().c_str(), &stats);
+	child->file_size = stats.st_size;
+      }
     }
     closedir(handle);
     // deleting stuff with iterators can lead to issues
@@ -165,50 +155,6 @@ static void manager_readdir(fuse_req_t req, fuse_ino_t ino, size_t size_limit, o
   else
     fuse_reply_buf(req, NULL, 0);
 
-
-  /*
-  return;
-
-  if( ino == 1) {
-    // open
-    char buf[1024*3];
-    size_t bytes = 0;
-    dirent dirEntry;
-    dirent *dirResult;
-
-    assert(sizeof(buf) < size_limit);
-
-
-    DIR* dir = Fuse_manager->openTargetDir();
-    seekdir(dir, off);
-    while(true) {
-      readdir_r(dir, &dirEntry, &dirResult);
-      if(!dirResult) break;
-      cout << dirEntry.d_name << " " << dirEntry.d_type << endl;
-      const char *name = dirEntry.d_name;
-      size_t size = fuse_add_direntry(req, NULL, 0, name, NULL, 0);
-      if(size + bytes > sizeof(buf)) break;
-      struct stat stbuf;
-      memset(&stbuf, 0, sizeof(stbuf));
-      stbuf.st_ino = dirEntry.d_ino + 15;
-      stbuf.st_mode = 0444 | dirEntry.d_type == DT_DIR ? S_IFDIR : S_IFREG;
-      //stbuf.st_atime = stbuf.st_mtime = stbuf.st_ctime = Fuse_manager->time();
-      fuse_add_direntry(req, buf + bytes, sizeof(buf) - bytes, name, &stbuf, bytes + size);
-      bytes += size;
-    }
-
-    closedir(dir);
-
-    if(bytes)
-      fuse_reply_buf(req, buf, bytes);
-    else
-      fuse_reply_buf(req, NULL, 0);
-
-    //Fuse_manager->listFiles(ino);
-
-    //    fuse_add_direntry(req, buf, sizeof(buf), "."
-  }
-  */
 }
 
 static void manager_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi) {
@@ -231,8 +177,12 @@ static void manager_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
   Fuse::fileInfo *file = (Fuse::fileInfo*) fi->fh;
   file->lock.lock();
 
+  const char *hello = "hello world";
 
-
+  if(off == 0)
+    fuse_reply_buf(req, hello, 12);
+  else
+    fuse_reply_buf(req, NULL, 0);
 
   file->lock.unlock();
 }
@@ -283,7 +233,7 @@ static struct fuse_lowlevel_ops manager_ll_oper = {
   NULL	// fallocate
 };
 
-Fuse::Fuse(char *_fuse_dir, char *_target_dir): fuse_dir(_fuse_dir), target_dir(_target_dir) {
+Fuse::Fuse(char *_fuse_dir, char *_target_dir, Torrents *torr): fuse_dir(_fuse_dir), target_dir(_target_dir), torrent_manager(torr) {
   assert(!Fuse_manager);
   Fuse_manager = this;
   fileInfo* root = inoMap[1] = new fileInfo;
@@ -361,7 +311,7 @@ Fuse::fileInfo* Fuse::lookupInode(fuse_ino_t ino) {
 
 DIR* Fuse::fileInfo::openDir() {
   std::string path = getPath();
-  cout << "open dir " << path;
+  //  cout << "open dir " << path;
   return opendir(path.c_str());
 }
 

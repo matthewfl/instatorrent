@@ -18,13 +18,14 @@ int main(int argc, char **argv) {
   }
 
 
-  Fuse fuse (argv[1], argv[2]);
-
   Torrents torrent(argv[2], argv[3]);
 
   thread downloader ([&torrent]() {
       torrent.Start();
     });
+
+
+  Fuse fuse (argv[1], argv[2], &torrent);
 
   fuse.Start();
 

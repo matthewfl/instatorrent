@@ -23,6 +23,7 @@
 
 #include <mutex>
 
+#include "torrent.h"
 
 
 class Fuse {
@@ -37,6 +38,7 @@ public:
     std::mutex lock;
     bool access = true;
     fileInfo *parent = NULL;
+    unsigned int file_size = 0;
     enum type_t {
       FILE,
       DIRECTORY
@@ -46,7 +48,7 @@ public:
   };
 public:
 
-  Fuse(char *_fuse_dir, char *_target_dir);
+  Fuse(char *_fuse_dir, char *_target_dir, Torrents *torr);
   Fuse() {}
   int Start();
 
@@ -70,6 +72,8 @@ private:
   char *target_dir;
 
   fuse_ino_t inode_count = 10;
+
+  Torrents *torrent_manager;
 };
 
 
