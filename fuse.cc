@@ -20,7 +20,13 @@ static void manager_lookup(fuse_req_t req, fuse_ino_t parent_ino, const char *na
     return;
   }
 
-  Fuse::fileInfo *file = parent->files[name];
+  auto inter = parent->files.find(name);
+  if(inter == parent->files.end()) {
+    fuse_reply_err(req, ENOENT);
+    return;
+  }
+
+  Fuse::fileInfo *file = inter->second;
   if(!file) {
     fuse_reply_err(req, ENOENT);
     return;
@@ -82,6 +88,7 @@ static void manager_readdir(fuse_req_t req, fuse_ino_t ino, size_t size_limit, o
 
   cerr << "before lookup";
   Fuse::fileInfo *dir = Fuse_manager->lookupInode(ino);
+
   assert(dir);
 
   // TODO: move this into opendir
@@ -103,6 +110,7 @@ static void manager_readdir(fuse_req_t req, fuse_ino_t ino, size_t size_limit, o
       readdir_r(handle, &dirEntry, &dirResult);
       if(!dirResult) break;
       if(dirEntry.d_name[0] == '.') continue; // no hidden files
+      cerr << "\t\t adding: " << dirEntry.d_name << endl;
       bytes += fuse_add_direntry(req, NULL, 0, dirEntry.d_name, NULL, 0);
       Fuse::fileInfo *child = dir->files[dirEntry.d_name];
       if(!child) {

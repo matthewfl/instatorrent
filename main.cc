@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
 
   fuse.Start();
 
-  // torrent.Stop();
+  torrent.Stop();
 
   downloader.join();
 

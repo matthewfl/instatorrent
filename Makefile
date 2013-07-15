@@ -4,7 +4,7 @@ SRC= main.cc fuse.cc torrent.cc
 
 OBJ= $(SRC:.cc=.o)
 
-FLAGS= -std=c++11
+FLAGS= -std=c++11 -ggdb
 
 TORRENT=deps/lib/libtorrent-rasterbar.a
 
@@ -28,11 +28,17 @@ clean-all: clean
 	cd lib/libtorrent && make clean
 	rm -rf lib/lib lib/include
 
-run: $(TARGET)
+_dirs:
 	mkdir -p /tmp/torr
 	mkdir -p /tmp/torr-target
 	mkdir -p /tmp/torr-watch
+
+
+run: $(TARGET) _dirs
 	./$(TARGET) /tmp/torr /tmp/torr-target /tmp/torr-watch
+
+debug: $(TARGET) _dirs
+	gdb $(TARGET) "--eval-command=run /tmp/torr /tmp/torr-target /tmp/torr-watch" --eval-command=bt
 
 $(TARGET): $(OBJ) $(TORRENT)
 	$(LD) $(FLAGS) -o $(TARGET) $(OBJ) $(LIB)
