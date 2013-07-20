@@ -38,6 +38,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/session_settings.hpp"
 #include "libtorrent/allocator.hpp"
 
+#include <boost/utility.hpp>
+
 #ifdef TORRENT_DISK_STATS
 #include <fstream>
 #endif
@@ -117,4 +119,3 @@ namespace libtorrent
 }
 
 #endif // TORRENT_DISK_BUFFER_POOL
-

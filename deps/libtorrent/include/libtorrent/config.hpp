@@ -44,7 +44,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #if !defined BOOST_ASIO_SEPARATE_COMPILATION && !defined BOOST_ASIO_DYN_LINK
 #error you must define either BOOST_ASIO_SEPARATE_COMPILATION or BOOST_ASIO_DYN_LINK in your project in \
-	order for asio's declarations to be correct. If you're linking dynamically against libtorrent, define \
+	order for asios declarations to be correct. If youre linking dynamically against libtorrent, define \
 	BOOST_ASIO_DYN_LINK otherwise BOOST_ASIO_SEPARATE_COMPILATION. You can also use pkg-config or boost \
 	build, to automatically apply these defines
 #endif
@@ -238,7 +238,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 // ==== SOLARIS ===
-#elif defined sun || defined __sun 
+#elif defined sun || defined __sun
 #define TORRENT_SOLARIS
 #define TORRENT_COMPLETE_TYPES_REQUIRED 1
 #define TORRENT_USE_IFCONF 1
@@ -515,4 +515,3 @@ inline int snprintf(char* buf, int len, char const* fmt, ...)
 
 
 #endif // TORRENT_CONFIG_HPP_INCLUDED
-
