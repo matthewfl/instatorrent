@@ -25,7 +25,6 @@
 
 #include "torrent.h"
 
-
 class Fuse {
 public:
   class fileInfo {
@@ -39,12 +38,16 @@ public:
     bool access = true;
     fileInfo *parent = NULL;
     unsigned int file_size = 0;
+    Torrents::Torrent *torrent = NULL;
+    void *mmap = NULL; // TODO: make this delete and stuff
+    int fd = 0;
     enum type_t {
       FILE,
       DIRECTORY
     } type;
     DIR* openDir();
     std::string getPath();
+    std::string getHash();
   };
 public:
 

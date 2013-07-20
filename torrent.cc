@@ -28,7 +28,7 @@ void Torrents::Start() {
   session.add_extension(&libtorrent::create_ut_pex_plugin);
 
   session.start_dht();
-  session.start_lsd();
+  //  session.start_lsd(); // local peers
   session.start_natpmp();
   session.start_upnp();
 
@@ -59,4 +59,9 @@ Torrents::Torrent::Torrent(Torrents* par) : parent(par) {
 
   cerr << "adding torrent " << info->name() << " size:" << info->total_size() << endl;
 
+}
+
+
+Torrents::Torrent* Torrents::lookupTorrent(std::string hash) {
+  return &torrent; // currently only one torrent
 }

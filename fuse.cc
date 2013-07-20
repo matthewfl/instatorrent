@@ -1,6 +1,7 @@
 #include "fuse.h"
 
 #include <dirent.h>
+#include <sys/mman.h>
 
 #include <assert.h>
 #include <iostream>
@@ -168,7 +169,18 @@ static void manager_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *
     fuse_reply_err(req, EACCES);
     return;
   }
+  if(file->type != Fuse::fileInfo::FILE) {
+    fuse_reply_err(req, EISDIR);
+    return;
+  }
   fi->fh = (uint64_t)file;
+  if(!file->fd) {
+    file->fd = open(file->getPath().c_str(), O_RDONLY);
+
+
+    file->mmap = mmap(NULL, file->file_size, PROT_READ, MAP_SHARED, file->fd, 0);
+  }
+
   fuse_reply_open(req, fi);
 }
 
@@ -298,6 +310,7 @@ Fuse::fileInfo* Fuse::newInode(fileInfo *parent) {
   info->inode = ++inode_count;
   info->parent = parent;
   inoMap[info->inode] = info;
+  info->torrent = torrent_manager->lookupTorrent(info->getHash());
   return info;
   //return ++inode_count;
 }
@@ -321,4 +334,12 @@ std::string Fuse::fileInfo::getPath() {
   }
   assert(parent);
   return parent->getPath() + "/" + name;
+}
+
+std::string Fuse::fileInfo::getHash() {
+  assert(parent);
+  if(parent->inode == 1) {
+    return name; // the base dir name will be the hash
+  }
+  return parent->getHash();
 }

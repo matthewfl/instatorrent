@@ -12,6 +12,8 @@ using namespace std;
 
 int main(int argc, char **argv) {
 
+  cerr << "Version: " << GIT_VERSION << endl;
+
   if(argc != 4) {
     cerr << "Usage: " << argv[0] << " [fuse dir] [target dir] [watch dir]";
       return 1;

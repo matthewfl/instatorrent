@@ -1,6 +1,7 @@
 #ifndef _tor_torrent
 #define _tor_torrent
 
+
 #include <libtorrent/entry.hpp>
 #include <libtorrent/session.hpp>
 #include <libtorrent/bencode.hpp>
@@ -24,6 +25,8 @@ public:
 
   void Start();
   void Stop();
+
+  Torrent* lookupTorrent(std::string hash);
 
 private:
   std::string target_dir;
