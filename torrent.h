@@ -18,7 +18,7 @@ public:
 
 
     Torrent(Torrents*);
-    TorrentFile lookupFile(std::string);
+    TorrentFile *lookupFile(std::string);
 
   private:
     Torrents* parent;

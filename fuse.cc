@@ -99,13 +99,13 @@ static void manager_readdir(fuse_req_t req, fuse_ino_t ino, size_t size_limit, o
       bytes += fuse_add_direntry(req, NULL, 0, dirEntry.d_name, NULL, 0);
       Fuse::fileInfo *child = dir->files[dirEntry.d_name];
       if(!child) {
-	child = dir->files[dirEntry.d_name] = Fuse_manager->newInode(dir, dirEntry.d_type == DT_DIR ? Fuse::fileInfo::DIRECTORY : Fuse::fileInfo::FILE);
+	child = dir->files[dirEntry.d_name] = Fuse_manager->newInode(dir);
 	child->name = dirEntry.d_name;
       }else{
 	child->access = true;
       }
       cerr << "\n looking at " << dirEntry.d_name << " type:" << (int)dirEntry.d_type;
-      //      child->type = ;
+      child->type = dirEntry.d_type == DT_DIR ? Fuse::fileInfo::DIRECTORY : Fuse::fileInfo::FILE;
 
       if(child->type == Fuse::fileInfo::FILE) {
 	struct stat stats;
@@ -190,12 +190,23 @@ static void manager_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
 
   const char *hello = "hello world";
 
+  Torrents::TorrentFile &handle = file->getFileHandle();
 
+  if(handle.has(off, size)) {
+    fuse_reply_buf(req, (char*)file->mmap + off, size);
+    return;
+  }
 
+  handle.get(off, size, [req, file, off, size](size_t _off, size_t _size) {
+      fuse_reply_buf(req, (char*)file->mmap + off, size);
+    });
+
+  /*
   if(off == 0)
     fuse_reply_buf(req, hello, 12);
   else
     fuse_reply_buf(req, NULL, 0);
+  */
 
   file->lock.unlock();
 }
@@ -306,17 +317,11 @@ time_t Fuse::time() {
 }
 
 
-Fuse::fileInfo* Fuse::newInode(fileInfo *parent, fileInfo::type_t type) {
+Fuse::fileInfo* Fuse::newInode(fileInfo *parent) {
   fileInfo *info = new fileInfo;
   info->inode = ++inode_count;
   info->parent = parent;
-  info->type = type;
   inoMap[info->inode] = info;
-  if(type == fileInfo::FILE) {
-    Torrents::Torrent *torrent = torrent_manager->lookupTorrent(info->getHash());
-    assert(torrent); // TODO: something that is not assert
-    info->torrent = torrent->lookupFile(info->getTorrentPath());
-  }
   return info;
   //return ++inode_count;
 }
@@ -356,4 +361,13 @@ std::string Fuse::fileInfo::getTorrentPath() {
     return "";
   }
   return parent->getTorrentPath() + "/" + name;
+}
+
+
+Torrents::TorrentFile &Fuse::fileInfo::getFileHandle() {
+  if(torrent) return *torrent;
+  assert(type == FILE);
+  Torrents::Torrent *handle = Fuse_manager->torrent_manager->lookupTorrent(getHash());
+  assert(handle); // TODO: something that is not assert
+  torrent = handle->lookupFile(getTorrentPath());
 }

@@ -67,13 +67,13 @@ Torrents::Torrent* Torrents::lookupTorrent(std::string hash) {
 }
 
 
-Torrents::TorrentFile Torrents::Torrent::lookupFile(std::string name) {
+Torrents::TorrentFile *Torrents::Torrent::lookupFile(std::string name) {
   cerr << "=================" << name << endl;
   const libtorrent::torrent_info &info = handle.get_torrent_info();
   for(auto it = info.begin_files(), end = info.end_files(); it != end; it++) {
     cerr << "it file --- " << it->filename()  << endl;
   }
-  return TorrentFile();
+  return NULL;
 }
 
 void Torrents::TorrentFile::get(size_t offset, size_t length, std::function<void(size_t, size_t)> callback) {
