@@ -31,7 +31,7 @@ struct Torrents_alert_handler {
 	      << std::endl;
   }
 
-  void operator()(piece_finished_alert const &a) {
+  void operator()(piece_finished_alert const &a) const {
     cerr << "piece finished alert " << a.message() << endl;
     const torrent_handle &handle = a.handle;
 
@@ -47,6 +47,7 @@ void Torrents::Start() {
   running = true;
   cerr << "torrent downloader starting\n";
 
+  /*
   session_settings settings = high_performance_seed();
   settings.announce_to_all_trackers = true;
   settings.announce_to_all_tiers = true;
@@ -55,6 +56,9 @@ void Torrents::Start() {
   settings.max_metadata_size = 4 * 1024 * 1024;
 
   session.set_settings(settings);
+  // */
+
+  session.set_alert_mask(alert::progress_notification);
 
   pe_settings con_settings;
   con_settings.out_enc_policy = pe_settings::forced;
@@ -82,10 +86,16 @@ void Torrents::Start() {
 
     std::auto_ptr<alert> alert = session.pop_alert();
     while(alert.get()) {
+      try {
       handle_alert<portmap_error_alert,
 		   tracker_warning_alert,
-		   torrent_finished_alert
+		   torrent_finished_alert,
+		   piece_finished_alert
 		   > hands(alert, alert_handler);
+      } catch (unhandled_alert e) {
+	// ignore stuff we don't care about
+	//cerr << "unhandled alert: " << e.what() << " " << alert->message() << endl;
+      }
       alert = session.pop_alert();
     }
 
