@@ -60,3 +60,12 @@ $(TORRENT): $(wildcard lib/libtorrent/include/*)
 	cd deps/libtorrent && make V=1
 	cd deps/libtorrent && make install
 	cd deps/libtorrent && make clean
+
+
+depend:
+	makedepend -Y -- $(FLAGS) -- $(SRC)
+# DO NOT DELETE
+
+main.o: fuse.h torrent.h
+fuse.o: fuse.h torrent.h
+torrent.o: torrent.h

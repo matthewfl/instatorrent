@@ -36,7 +36,7 @@ public:
     Torrent* m_parent;
     unsigned int m_size;
     unsigned int m_offset;
-    unsigned int m_start;
+    unsigned int m_block_size;
     TorrentFile(Torrent*, int, int, int);
     friend class Torrent;
   };

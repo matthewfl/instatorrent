@@ -38,7 +38,7 @@ public:
     bool access = true;
     fileInfo *parent = NULL;
     unsigned int file_size = 0;
-    Torrents::TorrentFile *torrent;
+    Torrents::TorrentFile *torrent = NULL;
     void *mmap = NULL; // TODO: make this delete and stuff
     int fd = 0;
     enum type_t {

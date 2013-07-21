@@ -188,7 +188,7 @@ static void manager_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
   Fuse::fileInfo *file = (Fuse::fileInfo*) fi->fh;
   file->lock.lock();
 
-  const char *hello = "hello world";
+  //const char *hello = "hello world";
 
   Torrents::TorrentFile &handle = file->getFileHandle();
 
@@ -198,7 +198,7 @@ static void manager_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
   }
 
   handle.get(off, size, [req, file, off, size](size_t _off, size_t _size) {
-      fuse_reply_buf(req, (char*)file->mmap + off, size);
+      fuse_reply_buf(req, (char*)file->mmap + off, _size);
     });
 
   /*
@@ -370,4 +370,5 @@ Torrents::TorrentFile &Fuse::fileInfo::getFileHandle() {
   Torrents::Torrent *handle = Fuse_manager->torrent_manager->lookupTorrent(getHash());
   assert(handle); // TODO: something that is not assert
   torrent = handle->lookupFile(getTorrentPath());
+  return *torrent;
 }
