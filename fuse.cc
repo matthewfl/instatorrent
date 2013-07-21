@@ -99,13 +99,13 @@ static void manager_readdir(fuse_req_t req, fuse_ino_t ino, size_t size_limit, o
       bytes += fuse_add_direntry(req, NULL, 0, dirEntry.d_name, NULL, 0);
       Fuse::fileInfo *child = dir->files[dirEntry.d_name];
       if(!child) {
-	child = dir->files[dirEntry.d_name] = Fuse_manager->newInode(dir);
+	child = dir->files[dirEntry.d_name] = Fuse_manager->newInode(dir, dirEntry.d_type == DT_DIR ? Fuse::fileInfo::DIRECTORY : Fuse::fileInfo::FILE);
 	child->name = dirEntry.d_name;
       }else{
 	child->access = true;
       }
       cerr << "\n looking at " << dirEntry.d_name << " type:" << (int)dirEntry.d_type;
-      child->type = dirEntry.d_type == DT_DIR ? Fuse::fileInfo::DIRECTORY : Fuse::fileInfo::FILE;
+      //      child->type = ;
 
       if(child->type == Fuse::fileInfo::FILE) {
 	struct stat stats;
@@ -175,9 +175,8 @@ static void manager_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *
   }
   fi->fh = (uint64_t)file;
   if(!file->fd) {
+    cerr << "---- open file: " << file->getPath() << endl;
     file->fd = open(file->getPath().c_str(), O_RDONLY);
-
-
     file->mmap = mmap(NULL, file->file_size, PROT_READ, MAP_SHARED, file->fd, 0);
   }
 
@@ -190,6 +189,8 @@ static void manager_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
   file->lock.lock();
 
   const char *hello = "hello world";
+
+
 
   if(off == 0)
     fuse_reply_buf(req, hello, 12);
@@ -305,12 +306,17 @@ time_t Fuse::time() {
 }
 
 
-Fuse::fileInfo* Fuse::newInode(fileInfo *parent) {
+Fuse::fileInfo* Fuse::newInode(fileInfo *parent, fileInfo::type_t type) {
   fileInfo *info = new fileInfo;
   info->inode = ++inode_count;
   info->parent = parent;
+  info->type = type;
   inoMap[info->inode] = info;
-  info->torrent = torrent_manager->lookupTorrent(info->getHash());
+  if(type == fileInfo::FILE) {
+    Torrents::Torrent *torrent = torrent_manager->lookupTorrent(info->getHash());
+    assert(torrent); // TODO: something that is not assert
+    info->torrent = torrent->lookupFile(info->getTorrentPath());
+  }
   return info;
   //return ++inode_count;
 }
@@ -342,4 +348,12 @@ std::string Fuse::fileInfo::getHash() {
     return name; // the base dir name will be the hash
   }
   return parent->getHash();
+}
+
+std::string Fuse::fileInfo::getTorrentPath() {
+  assert(parent);
+  if(parent->inode == 1) {
+    return "";
+  }
+  return parent->getTorrentPath() + "/" + name;
 }

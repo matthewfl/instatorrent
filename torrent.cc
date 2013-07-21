@@ -65,3 +65,35 @@ Torrents::Torrent::Torrent(Torrents* par) : parent(par) {
 Torrents::Torrent* Torrents::lookupTorrent(std::string hash) {
   return &torrent; // currently only one torrent
 }
+
+
+Torrents::TorrentFile Torrents::Torrent::lookupFile(std::string name) {
+  cerr << "=================" << name << endl;
+  const libtorrent::torrent_info &info = handle.get_torrent_info();
+  for(auto it = info.begin_files(), end = info.end_files(); it != end; it++) {
+    cerr << "it file --- " << it->filename()  << endl;
+  }
+  return TorrentFile();
+}
+
+void Torrents::TorrentFile::get(size_t offset, size_t length, std::function<void(size_t, size_t)> callback) {
+  assert(m_parent);
+  assert(offset + length <= m_size);
+
+
+}
+
+bool Torrents::TorrentFile::has(size_t offset, size_t length) {
+  assert(m_parent);
+
+  //parent->handle.have_piece()
+}
+
+
+Torrents::TorrentFile::TorrentFile(Torrent *par, int start_block, int offset, int size) : m_parent(par), m_size(size), m_offset(offset), m_start(start_block) {
+
+}
+
+Torrents::TorrentFile::TorrentFile() : m_parent(NULL) {
+
+}

@@ -38,7 +38,7 @@ public:
     bool access = true;
     fileInfo *parent = NULL;
     unsigned int file_size = 0;
-    Torrents::Torrent *torrent = NULL;
+    Torrents::TorrentFile torrent;
     void *mmap = NULL; // TODO: make this delete and stuff
     int fd = 0;
     enum type_t {
@@ -48,6 +48,8 @@ public:
     DIR* openDir();
     std::string getPath();
     std::string getHash();
+    std::string getTorrentPath();
+    Torrents::TorrentFile &getFileHandle();
   };
 public:
 
@@ -60,7 +62,7 @@ public:
   DIR* openTargetDir();
   time_t time();
 
-  fileInfo* newInode(fileInfo *parent);
+  fileInfo* newInode(fileInfo *parent, fileInfo::type_t type);
   fileInfo* lookupInode(fuse_ino_t ino);
 
 
