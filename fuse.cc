@@ -162,14 +162,17 @@ static void manager_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *
   cerr << "fuse open\n";
   Fuse::fileInfo *file = Fuse_manager->lookupInode(ino);
   if(!file) {
+    cerr << "!file\n";
     fuse_reply_err(req, EISDIR);
     return;
   }
   if((fi->flags & 3) != O_RDONLY) {
+    cerr << "readonly\n";
     fuse_reply_err(req, EACCES);
     return;
   }
   if(file->type != Fuse::fileInfo::FILE) {
+    cerr << "type\n";
     fuse_reply_err(req, EISDIR);
     return;
   }
@@ -179,6 +182,7 @@ static void manager_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *
     file->fd = open(file->getPath().c_str(), O_RDONLY);
     file->mmap = mmap(NULL, file->file_size, PROT_READ, MAP_SHARED, file->fd, 0);
   }
+  cerr << "open reply good\n";
 
   fuse_reply_open(req, fi);
 }
@@ -194,21 +198,18 @@ static void manager_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
 
   if(handle.has(off, size)) {
     fuse_reply_buf(req, (char*)file->mmap + off, size);
+    file->lock.unlock();
     return;
   }
 
   handle.get(off, size, [req, file, off, size](size_t _off, size_t _size) {
+      file->lock.lock();
       fuse_reply_buf(req, (char*)file->mmap + off, _size);
+      file->lock.unlock();
     });
 
-  /*
-  if(off == 0)
-    fuse_reply_buf(req, hello, 12);
-  else
-    fuse_reply_buf(req, NULL, 0);
-  */
-
   file->lock.unlock();
+
 }
 
 

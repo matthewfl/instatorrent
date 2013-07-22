@@ -8,6 +8,8 @@
 
 #include <string>
 
+struct Torrents_alert_handler;
+
 class Torrents {
 public:
 
@@ -21,10 +23,13 @@ public:
     TorrentFile *lookupFile(std::string);
 
   private:
+    std::multimap<int, std::function<void(int)>> m_alertCallbacks;
+    void alert(int);
     Torrents* parent;
     libtorrent::torrent_handle handle;
     friend class TorrentFile;
     friend class Torrents;
+    friend struct Torrents_alert_handler;
   };
 
   class TorrentFile {
@@ -57,6 +62,8 @@ private:
 
   // just for testing atm
   Torrent torrent = Torrent(this);
+
+  friend struct Torrents_alert_handler;
 };
 
 #endif

@@ -14,6 +14,8 @@ using namespace libtorrent;
 
 struct Torrents_alert_handler {
 
+  Torrents *torrents;
+
   void operator()(portmap_error_alert const &a) const {
     std::cerr << "Portmapper error: " << a.message() << std::endl;
   }
@@ -34,7 +36,8 @@ struct Torrents_alert_handler {
   void operator()(piece_finished_alert const &a) const {
     cerr << "piece finished alert " << a.message() << endl;
     const torrent_handle &handle = a.handle;
-
+    // TODO: lookup which torrent this is
+    torrents->torrent.alert(a.piece_index);
   }
 };
 
@@ -75,6 +78,7 @@ void Torrents::Start() {
   session.start_upnp();
 
   Torrents_alert_handler alert_handler;
+  alert_handler.torrents = this;
 
   while(running) {
     // TODO: make these global stats
@@ -98,8 +102,6 @@ void Torrents::Start() {
       }
       alert = session.pop_alert();
     }
-
-
 
     sleep(1000);
   }
@@ -145,10 +147,31 @@ Torrents::TorrentFile *Torrents::Torrent::lookupFile(std::string name) {
   return NULL;
 }
 
+void Torrents::Torrent::alert(int index) {
+  auto msg = m_alertCallbacks.equal_range(index);
+  for(auto it = msg.first; it != msg.second; it++) {
+    it->second(index);
+  }
+  m_alertCallbacks.erase(msg.first, msg.second);
+}
+
 void Torrents::TorrentFile::get(size_t offset, size_t length, std::function<void(size_t, size_t)> callback) {
   assert(m_parent);
   assert(offset + length <= m_size);
+  assert(length <= m_block_size); // TODO: remove
+  int start_block = (m_offset + offset) / m_block_size;
 
+  //  function<void(int)> f = [callback] (int block) -> void {};
+
+
+  m_parent->m_alertCallbacks.insert(pair<int, function<void(int)>>(start_block, [callback, offset, length](int block) -> void{
+	cerr << "!!!!!!!!!!!!!!!!! callback: " << block << endl;
+	callback(offset, length);
+      }));
+
+  m_parent->handle.piece_priority(start_block, 7);
+
+  cerr << "@@@@@@@@@@@ requesting: " << start_block << endl;
 
 
 }
