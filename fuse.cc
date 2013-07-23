@@ -49,7 +49,7 @@ static void manager_lookup(fuse_req_t req, fuse_ino_t parent_ino, const char *na
 }
 
 static void manager_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi) {
-  cerr << "fuse getattr " << ino << endl;
+  cerr << "fuse getattr " << ino << " ";
 
   struct stat stbuf;
 
@@ -57,11 +57,13 @@ static void manager_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_inf
 
   //  memset(&stbuf, 0, sizeof(stbuf));
   string name = file->getPath();
-  //cerr << "file name: " << name << endl;
+  cerr << "file name: " << name << endl;
   stat(name.c_str(), &stbuf);
 
-  stbuf.st_mode = S_IFDIR | 0444;
+  stbuf.st_ino = ino;
+  stbuf.st_mode = (file->type == Fuse::fileInfo::FILE ? S_IFREG : S_IFDIR) | 0444; // TODO: WORKING .. FIX
   stbuf.st_nlink = 2;
+
   //stbuf.st_size = file->file_size;
 
   fuse_reply_attr(req, &stbuf, 1.0);
@@ -278,6 +280,7 @@ Fuse::Fuse(char *_fuse_dir, char *_target_dir, Torrents *torr): fuse_dir(_fuse_d
   fileInfo* root = inoMap[1] = new fileInfo;
   root->inode = 1;
   root->name = target_dir;
+  root->type = Fuse::fileInfo::DIRECTORY;
   assert(sizeof(uint64_t) >= sizeof(void*));
 }
 

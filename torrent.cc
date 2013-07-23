@@ -50,13 +50,13 @@ void Torrents::Start() {
   running = true;
   cerr << "torrent downloader starting\n";
 
-
+  /*
   session_settings settings = high_performance_seed();
   settings.announce_to_all_trackers = true;
   settings.announce_to_all_tiers = true;
   settings.inactivity_timeout = 90;
   settings.choking_algorithm = session_settings::bittyrant_choker;
-  settings.max_metadata_size = 4 * 1024 * 1024;
+  settings.max_metadata_size = 4 * 1024 * 1024; // TODO: might up to 8mb
 
   session.set_settings(settings);
   // */
