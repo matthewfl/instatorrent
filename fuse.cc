@@ -23,6 +23,7 @@ static void manager_lookup(fuse_req_t req, fuse_ino_t parent_ino, const char *na
 
   auto inter = parent->files.find(name);
   if(inter == parent->files.end()) {
+    // TODO: need to refresh the dir listing here
     fuse_reply_err(req, ENOENT);
     return;
   }
@@ -52,11 +53,16 @@ static void manager_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_inf
 
   struct stat stbuf;
 
-  (void) fi;
+  Fuse::fileInfo *file = Fuse_manager->lookupInode(ino);
 
-  memset(&stbuf, 0, sizeof(stbuf));
+  //  memset(&stbuf, 0, sizeof(stbuf));
+  string name = file->getPath();
+  //cerr << "file name: " << name << endl;
+  stat(name.c_str(), &stbuf);
+
   stbuf.st_mode = S_IFDIR | 0444;
   stbuf.st_nlink = 2;
+  //stbuf.st_size = file->file_size;
 
   fuse_reply_attr(req, &stbuf, 1.0);
 
@@ -191,6 +197,14 @@ static void manager_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
   cerr << "fuse read " << size << " " << off << endl;
   Fuse::fileInfo *file = (Fuse::fileInfo*) fi->fh;
   file->lock.lock();
+  if(off + size > file->file_size) {
+    size = file->file_size - off;
+  }
+  if(size <= 0) {
+    fuse_reply_buf(req, NULL, 0);
+    return;
+  }
+  cerr << "new size: " << size << endl;
 
   //const char *hello = "hello world";
 
@@ -271,7 +285,8 @@ int Fuse::Start() {
   assert(Fuse_manager);
 
   const char *fuse_argv[2];
-  fuse_argv[0] = "-f";
+  // TODO: change back to -f
+  fuse_argv[0] = "-d";
   fuse_argv[1] = fuse_dir;
 
   struct fuse_args args = FUSE_ARGS_INIT(2, const_cast<char**>(fuse_argv));

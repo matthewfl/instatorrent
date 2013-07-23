@@ -50,7 +50,7 @@ void Torrents::Start() {
   running = true;
   cerr << "torrent downloader starting\n";
 
-  /*
+
   session_settings settings = high_performance_seed();
   settings.announce_to_all_trackers = true;
   settings.announce_to_all_tiers = true;
@@ -160,28 +160,48 @@ void Torrents::TorrentFile::get(size_t offset, size_t length, std::function<void
   assert(offset + length <= m_size);
   assert(length <= m_block_size); // TODO: remove
   int start_block = (m_offset + offset) / m_block_size;
+  int end_block = (m_offset + offset + length) / m_block_size;
+  //assert(start_block == end_block);
+
 
   //  function<void(int)> f = [callback] (int block) -> void {};
 
+  // if we capture the variable then it will reference to the location on the stack
+  int *count = new int;
+  *count = end_block - start_block;
 
-  m_parent->m_alertCallbacks.insert(pair<int, function<void(int)>>(start_block, [callback, offset, length](int block) -> void{
+  function<void(int)> func = [callback, offset, length, count](int block) -> void{
 	cerr << "!!!!!!!!!!!!!!!!! callback: " << block << endl;
-	callback(offset, length);
-      }));
+	if(*count == 0) {
+	  callback(offset, length);
+	  delete count;
+	  return;
+	}
+	(*count)--;
+  };
 
-  m_parent->handle.piece_priority(start_block, 7);
+  for(int block = start_block; block <= end_block; block++) {
+    m_parent->m_alertCallbacks.insert(pair<int, function<void(int)>>(block, func));
+  }
 
-  cerr << "@@@@@@@@@@@ requesting: " << start_block << endl;
+  for(int block = start_block; block <= end_block; block++) {
+    m_parent->handle.piece_priority(block, 7);
+  }
 
-
+  cerr << "@@@@@@@@@@@ requesting: " << start_block << ".." << end_block << endl;
 }
 
 bool Torrents::TorrentFile::has(size_t offset, size_t length) {
   assert(m_parent);
   int start_block = (m_offset + offset) / m_block_size;
-  assert(length <= m_block_size); // TODO: remove
-
-  return m_parent->handle.have_piece(start_block);
+  int end_block = (m_offset + offset + length) / m_block_size;
+  //assert(length <= m_block_size); // TODO: remove
+  for(int block = start_block; block <= end_block; block++) {
+    if(!m_parent->handle.have_piece(start_block))
+      return false;
+  }
+  return true;
+  //return m_parent->handle.have_piece(start_block);
   // parent->handle.have_piece()
 }
 
