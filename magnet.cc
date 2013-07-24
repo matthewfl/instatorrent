@@ -19,7 +19,7 @@ struct Magnet_alert_handler {
 
   void operator()(metadata_received_alert const &a) const {
     const torrent_handle &h = a.handle;
-    string hash = h.info_hash().to_string();
+    string hash = to_hex(h.info_hash().to_string());
     if (h.is_valid()) {
       torrent_info const& ti = h.get_torrent_info();
       create_torrent ct(ti);
@@ -38,12 +38,12 @@ struct Magnet_alert_handler {
     cerr << "done with: " << hash << endl;
   }
 
-  void operator()(state_changed_alert const &a) const {}
-
 };
 
-Magnet::Magnet (char *dir) : Torrents(dir, ""), path(dir) {
+Magnet::Magnet (char *dir) : Torrents(dir, "") {
   // read from stdin
+  path = dir;
+  path += '/';
 }
 
 void Magnet::Start() {
@@ -81,8 +81,7 @@ void Magnet::Watch () {
     while(alert.get()) {
       try {
 	handle_alert<
-	  metadata_received_alert,
-	  state_changed_alert
+	  metadata_received_alert
 	  > hands(alert, alert_handler);
       } catch(unhandled_alert e) {
 	// this is me caring

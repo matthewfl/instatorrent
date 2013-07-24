@@ -1,7 +1,6 @@
 #ifndef _tor_magnet
 #define _tor_magnet
 
-#include <libtorrent/create_torrent.hpp>
 #include "torrent.h"
 
 
@@ -23,7 +22,7 @@ private:
 
   bool running = false;
 
-  char *path;
+  std::string path;
   friend struct Magnet_alert_handler;
 };
 
