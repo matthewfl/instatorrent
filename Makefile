@@ -1,6 +1,6 @@
 TARGET= tor-runner
 
-SRC= main.cc fuse.cc torrent.cc
+SRC= main.cc fuse.cc torrent.cc magnet.cc
 
 OBJ= $(SRC:.cc=.o)
 
@@ -42,7 +42,7 @@ _dirs:
 
 
 run: $(TARGET) _dirs
-	./$(TARGET) /tmp/torr /tmp/torr-target /tmp/torr-watch
+	./$(TARGET) download /tmp/torr /tmp/torr-target /tmp/torr-watch
 
 debug: $(TARGET) _dirs
 	gdb $(TARGET) "--eval-command=run /tmp/torr /tmp/torr-target /tmp/torr-watch" --eval-command=bt
@@ -66,6 +66,7 @@ depend:
 	makedepend -Y -- $(FLAGS) -- $(SRC)
 # DO NOT DELETE
 
-main.o: fuse.h torrent.h
+main.o: fuse.h torrent.h magnet.h
 fuse.o: fuse.h torrent.h
 torrent.o: torrent.h
+magnet.o: magnet.h torrent.h

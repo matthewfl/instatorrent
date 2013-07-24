@@ -53,12 +53,15 @@ public:
 
   Torrent* lookupTorrent(std::string hash);
 
+protected:
+  void Configure();
+
+  libtorrent::session session; // TODO: set the client id
+
 private:
   std::string target_dir;
   std::string watch_dir;
   bool running = false;
-
-  libtorrent::session session; // TODO: set the client id
 
   // just for testing atm
   Torrent torrent = Torrent(this);

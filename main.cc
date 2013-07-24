@@ -2,11 +2,17 @@
 
 #include "fuse.h"
 #include "torrent.h"
+#include "magnet.h"
 
 #include <thread>
+#include <string>
 
 
 using namespace std;
+
+#define usage					\
+cerr << "Usage: " << argv[0] << " download [fuse dir] [target dir] [watch dir]" << endl \
+<< argv[0] << " magnet [target dir]" << endl;
 
 
 
@@ -14,26 +20,47 @@ int main(int argc, char **argv) {
 
   cerr << "Version: " << GIT_VERSION << endl;
 
-  if(argc != 4) {
-    cerr << "Usage: " << argv[0] << " [fuse dir] [target dir] [watch dir]";
-      return 1;
+  if(argc == 1) {
+    usage;
+    return 1;
   }
 
+  string mode = argv[1];
+  if(mode == "magnet") {
+    if(argc != 3) {
+      usage;
+      return 1;
+    }
 
-  Torrents torrent(argv[2], argv[3]);
+    Magnet magnet(argv[2]);
 
-  thread downloader ([&torrent]() {
-      torrent.Start();
-    });
+    magnet.Start();
+
+    return 0;
+  }else if(mode == "download") {
+    if(argc != 5) {
+      usage;
+      return 1;
+    }
+    Torrents torrent(argv[3], argv[4]);
+
+    thread downloader ([&torrent]() {
+	torrent.Start();
+      });
 
 
-  Fuse fuse (argv[1], argv[2], &torrent);
+    Fuse fuse (argv[2], argv[3], &torrent);
 
-  fuse.Start();
+    fuse.Start();
 
-  torrent.Stop();
+    torrent.Stop();
 
-  downloader.join();
+    downloader.join();
 
-  return 0;
+    return 0;
+  }else{
+    cerr << "mode not found\n";
+    usage;
+    return 1;
+  }
 }

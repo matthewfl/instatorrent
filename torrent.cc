@@ -6,6 +6,8 @@ using namespace std;
 
 
 #include <libtorrent/extensions/ut_pex.hpp>
+#include <libtorrent/extensions/metadata_transfer.hpp>
+#include <libtorrent/extensions/ut_metadata.hpp>
 #include <libtorrent/alert.hpp>
 #include <libtorrent/alert_types.hpp>
 
@@ -45,11 +47,7 @@ Torrents::Torrents(char *_target_dir, char *_watch_dir) : target_dir(_target_dir
 
 }
 
-
-void Torrents::Start() {
-  running = true;
-  cerr << "torrent downloader starting\n";
-
+void Torrents::Configure() {
   /*
   session_settings settings = high_performance_seed();
   settings.announce_to_all_trackers = true;
@@ -61,7 +59,8 @@ void Torrents::Start() {
   session.set_settings(settings);
   // */
 
-  session.set_alert_mask(alert::progress_notification);
+  session.set_alert_mask(alert::progress_notification | alert::port_mapping_notification |
+			 alert::tracker_notification | alert::status_notification);
 
   pe_settings con_settings;
   con_settings.out_enc_policy = pe_settings::forced;
@@ -71,31 +70,47 @@ void Torrents::Start() {
 
   // peer exchange
   session.add_extension(&libtorrent::create_ut_pex_plugin);
+  // metadata
+  session.add_extension(&libtorrent::create_metadata_plugin);
+  session.add_extension(&libtorrent::create_ut_metadata_plugin);
 
   session.start_dht();
   //  session.start_lsd(); // local peers
   session.start_natpmp();
   session.start_upnp();
 
+}
+
+void Torrents::Start() {
+  running = true;
+  cerr << "torrent downloader starting\n";
+
+  Configure();
+
   Torrents_alert_handler alert_handler;
   alert_handler.torrents = this;
 
   while(running) {
     // TODO: make these global stats
-    torrent_status stat = torrent.handle.status();
+    // torrent_status stat = torrent.handle.status();
 
-    cerr << "progress:" << stat.progress << " trac:" << stat.current_tracker << " connected:" << stat.num_peers
-	 << " cons:" << stat.num_connections << " seeds:" << stat.num_seeds <<  endl;
+    // cerr << "progress:" << stat.progress << " trac:" << stat.current_tracker << " connected:" << stat.num_peers
+    // 	 << " cons:" << stat.num_connections << " seeds:" << stat.num_seeds <<  endl;
+
+    session_status stats = session.status();
+    cerr << "stats: " << stats.upload_rate << "\t" << stats.download_rate << "\t" << stats.total_download << "\t" << stats.total_upload << "\t"
+	 << stats.num_peers << endl;
 
 
     std::auto_ptr<alert> alert = session.pop_alert();
     while(alert.get()) {
       try {
-      handle_alert<portmap_error_alert,
-		   tracker_warning_alert,
-		   torrent_finished_alert,
-		   piece_finished_alert
-		   > hands(alert, alert_handler);
+	handle_alert<
+	  portmap_error_alert,
+	  tracker_warning_alert,
+	  torrent_finished_alert,
+	  piece_finished_alert
+	  > hands(alert, alert_handler);
       } catch (unhandled_alert e) {
 	// ignore stuff we don't care about
 	//cerr << "unhandled alert: " << e.what() << " " << alert->message() << endl;
@@ -114,6 +129,7 @@ void Torrents::Stop() {
 
 Torrents::Torrent::Torrent(Torrents* par) : parent(par) {
   //torrent_info info("testing.torrent");
+  return;
   boost::intrusive_ptr<torrent_info> info(new torrent_info("testing.torrent"));
 
   add_torrent_params params;                // write fast resume data
