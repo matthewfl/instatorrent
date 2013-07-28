@@ -35,6 +35,8 @@ struct Magnet_alert_handler {
       }
     }
     magnet->session.remove_torrent(h);
+    int *aa = NULL;
+    *aa = 1;
     cerr << "done with: " << hash << endl;
   }
 

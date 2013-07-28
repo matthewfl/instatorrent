@@ -8,4 +8,4 @@ config.status
 *.la
 libtool
 include/
-lib/
+lib/lib*

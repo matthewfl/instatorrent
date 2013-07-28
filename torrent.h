@@ -56,7 +56,7 @@ public:
 protected:
   void Configure();
 
-  libtorrent::session session; // TODO: set the client id
+  libtorrent::session session;// = libtorrent::session(; // TODO: set the client id
 
 private:
   std::string target_dir;

@@ -15,7 +15,7 @@ TORRENT=deps/lib/libtorrent-rasterbar.a
 PKG_CONFIG_PATH=./deps/lib/pkgconfig
 
 INCLUDE= $(shell PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) pkg-config fuse libtorrent-rasterbar --cflags)
-LIB= ./deps/lib/libtorrent-rasterbar.a -lboost_system -lssl -lcrypto $(shell PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) pkg-config fuse --libs --static)
+LIB= ./deps/lib/libtorrent-rasterbar.a ./deps/libboost_system.a -lssl -lcrypto $(shell PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) pkg-config fuse --libs --static)
 
 
 LD= g++
