@@ -56,7 +56,10 @@ public:
 protected:
   void Configure();
 
-  libtorrent::session session;// = libtorrent::session(; // TODO: set the client id
+  // TODO: set the client id
+  libtorrent::session session;//(libtorrent::fingerprint, //("LT", 0, 1, 0, 0),
+				// std::pair<int, int> (15000, 18000));
+
 
 private:
   std::string target_dir;

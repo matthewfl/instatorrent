@@ -15,7 +15,7 @@ TORRENT=deps/lib/libtorrent-rasterbar.a
 PKG_CONFIG_PATH=./deps/lib/pkgconfig
 
 INCLUDE= $(shell PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) pkg-config fuse libtorrent-rasterbar --cflags)
-LIB= ./deps/lib/libtorrent-rasterbar.a ./deps/libboost_system.a -lssl -lcrypto $(shell PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) pkg-config fuse --libs --static)
+LIB= ./deps/lib/libtorrent-rasterbar.a -lboost_system -lssl -lcrypto $(shell PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) pkg-config fuse --libs --static)
 
 
 LD= g++
@@ -47,7 +47,7 @@ run: $(TARGET) _dirs
 debug: $(TARGET) _dirs
 	gdb $(TARGET) "--eval-command=run /tmp/torr /tmp/torr-target /tmp/torr-watch" --eval-command=bt
 
-$(TARGET): $(OBJ) $(TORRENT)
+$(TARGET): $(TORRENT) $(OBJ)
 	$(LD) $(FLAGS) -o $(TARGET) $(OBJ) $(LIB)
 
 .cc.o:
@@ -55,7 +55,6 @@ $(TARGET): $(OBJ) $(TORRENT)
 
 
 $(TORRENT): $(wildcard lib/libtorrent/include/*)
-	cd deps/libtorrent && make clean
 	cd deps/libtorrent && ./configure --prefix=`pwd`/../ --disable-geoip
 	cd deps/libtorrent && make V=1
 	cd deps/libtorrent && make install

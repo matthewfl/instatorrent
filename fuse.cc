@@ -288,8 +288,7 @@ int Fuse::Start() {
   assert(Fuse_manager);
 
   const char *fuse_argv[2];
-  // TODO: change back to -f
-  fuse_argv[0] = "-d";
+  fuse_argv[0] = "-f";
   fuse_argv[1] = fuse_dir;
 
   struct fuse_args args = FUSE_ARGS_INIT(2, const_cast<char**>(fuse_argv));
