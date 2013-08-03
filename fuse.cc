@@ -410,7 +410,10 @@ Torrents::TorrentFile &Fuse::fileInfo::getFileHandle() {
   if(torrent) return *torrent;
   assert(type == FILE);
   Torrents::Torrent *handle = Fuse_manager->torrent_manager->lookupTorrent(getHash());
-  assert(handle); // TODO: something that is not assert
+  if(!handle)
+    //return Fuse_manager->torrent_manager->EmtpyTorrentFile;
+    return Torrents::EmptyTorrentFile;
+  //assert(handle); // TODO: something that is not assert
   torrent = handle->lookupFile(getTorrentPath());
   return *torrent;
 }

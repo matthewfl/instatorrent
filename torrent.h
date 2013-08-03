@@ -19,7 +19,7 @@ public:
     // libtorrent::torrent_info info;
 
 
-    Torrent(Torrents*);
+    Torrent(Torrents*, libtorrent::torrent_handle);
     TorrentFile *lookupFile(std::string);
 
   private:
@@ -54,6 +54,8 @@ public:
 
   Torrent* lookupTorrent(std::string hash);
 
+  static TorrentFile EmptyTorrentFile;
+
 protected:
   void Configure();
 
@@ -72,7 +74,7 @@ private:
   std::map<libtorrent::sha1_hash, Torrent*> m_torrents;
 
   // just for testing atm
-  Torrent torrent = Torrent(this);
+  //Torrent torrent;// = Torrent(this);
 
   friend struct Torrents_alert_handler;
 };

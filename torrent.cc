@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <iostream>
+#include <thread>
 using namespace std;
 
 #include <dirent.h>
@@ -39,8 +40,10 @@ struct Torrents_alert_handler {
   void operator()(piece_finished_alert const &a) const {
     cerr << "piece finished alert " << a.message() << endl;
     const torrent_handle &handle = a.handle;
+    torrents->m_torrents.find(handle.info_hash())->second->alert(a.piece_index);
+
     // TODO: lookup which torrent this is
-    torrents->torrent.alert(a.piece_index);
+    //torrents->torrent.alert(a.piece_index);
   }
 };
 
@@ -91,6 +94,10 @@ void Torrents::Start() {
   Torrents_alert_handler alert_handler;
   alert_handler.torrents = this;
 
+  std::thread watch_thread([this](){
+      Watch();
+    });
+
   while(running) {
     // TODO: make these global stats
     // torrent_status stat = torrent.handle.status();
@@ -119,9 +126,10 @@ void Torrents::Start() {
       alert = session.pop_alert();
     }
 
-    sleep(1000);
+    sleep(1000); // make this smaller to read the pieces off faster
   }
 
+  watch_thread.join();
 }
 
 void Torrents::Stop() {
@@ -129,15 +137,41 @@ void Torrents::Stop() {
 }
 
 void Torrents::Watch () {
+  dirent dirEntry;
+  dirent *dirResult;
   while(running) {
     DIR* dir = opendir(watch_dir.c_str());
+    while(true) {
+      readdir_r(dir, &dirEntry, &dirResult);
+      if(!dirResult) break;
+      if(dirEntry.d_name[0] == '.') continue; // no hidden files
+      boost::intrusive_ptr<torrent_info> info;
+      try {
+	info = new torrent_info(watch_dir + "/" + dirEntry.d_name);
+      } catch(libtorrent_exception e) {
+	cerr << "watch dir " << e.what() << endl;
+	continue;
+      }
+      if(m_torrents.find(info->info_hash()) == m_torrents.end()) {
+	add_torrent_params params;
+	params.ti = info;
+	params.save_path = target_dir + "/" + to_hex(info->info_hash().to_string());
+	params.storage_mode = storage_mode_allocate;
 
+	m_torrents[info->info_hash()] = new Torrent(this, session.add_torrent(params));
+
+	cerr << "adding torrent " << info->name() << " size:" << info->total_size() << " hash:" << to_hex(info->info_hash().to_string()) << endl;
+      }
+      cerr << "watch dir: " << dirEntry.d_name << endl;
+    }
+    closedir(dir);
+    sleep(2000);
   }
 }
 
-Torrents::Torrent::Torrent(Torrents* par) : parent(par) {
+Torrents::Torrent::Torrent(Torrents* par, torrent_handle hand) : parent(par), handle(hand) {
   //torrent_info info("testing.torrent");
-  //return;
+  return;
   boost::intrusive_ptr<torrent_info> info(new torrent_info("testing.torrent"));
 
   add_torrent_params params;                // write fast resume data
@@ -153,7 +187,14 @@ Torrents::Torrent::Torrent(Torrents* par) : parent(par) {
 
 
 Torrents::Torrent* Torrents::lookupTorrent(std::string hash) {
-  return &torrent; // currently only one torrent
+  assert(hash.size() == 40);
+  sha1_hash sha;
+  from_hex(hash.c_str(), 40, (char*)sha[0]);
+  auto tor = m_torrents.find(sha);
+  if(tor == m_torrents.end()) return NULL;
+  return tor->second;
+
+  //  return &torrent; // currently only one torrent
 }
 
 
@@ -164,6 +205,7 @@ Torrents::TorrentFile *Torrents::Torrent::lookupFile(std::string name) {
     string itname = "/";
     itname += it->filename();
     cerr << "it file --- " << itname << " " << it->offset << " " << it->size << endl;
+    // should just make this not return a pointer
     if(itname == name) {
       return new TorrentFile(this, info.piece_length(), it->offset, it->size);
     }
@@ -182,7 +224,7 @@ void Torrents::Torrent::alert(int index) {
 void Torrents::TorrentFile::get(size_t offset, size_t length, std::function<void(size_t, size_t)> callback) {
   assert(m_parent);
   assert(offset + length <= m_size);
-  assert(length <= m_block_size); // TODO: remove
+  //assert(length <= m_block_size); // TODO: remove
   int start_block = (m_offset + offset) / m_block_size;
   int end_block = (m_offset + offset + length) / m_block_size;
   //assert(start_block == end_block);
@@ -216,7 +258,8 @@ void Torrents::TorrentFile::get(size_t offset, size_t length, std::function<void
 }
 
 bool Torrents::TorrentFile::has(size_t offset, size_t length) {
-  assert(m_parent);
+  if(!m_parent) return true;
+  //assert(m_parent);
   int start_block = (m_offset + offset) / m_block_size;
   int end_block = (m_offset + offset + length) / m_block_size;
   //assert(length <= m_block_size); // TODO: remove
@@ -237,3 +280,5 @@ Torrents::TorrentFile::TorrentFile(Torrent *par, int block_size, int offset, int
 Torrents::TorrentFile::TorrentFile() : m_parent(NULL) {
 
 }
+
+Torrents::TorrentFile Torrents::EmptyTorrentFile = TorrentFile();
