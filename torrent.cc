@@ -4,6 +4,7 @@
 #include <iostream>
 using namespace std;
 
+#include <dirent.h>
 
 #include <libtorrent/extensions/ut_pex.hpp>
 #include <libtorrent/extensions/metadata_transfer.hpp>
@@ -127,9 +128,16 @@ void Torrents::Stop() {
   running = false;
 }
 
+void Torrents::Watch () {
+  while(running) {
+    DIR* dir = opendir(watch_dir.c_str());
+
+  }
+}
+
 Torrents::Torrent::Torrent(Torrents* par) : parent(par) {
   //torrent_info info("testing.torrent");
-  return;
+  //return;
   boost::intrusive_ptr<torrent_info> info(new torrent_info("testing.torrent"));
 
   add_torrent_params params;                // write fast resume data

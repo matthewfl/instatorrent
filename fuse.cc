@@ -40,7 +40,7 @@ static void manager_lookup(fuse_req_t req, fuse_ino_t parent_ino, const char *na
   e.ino = file->inode;
   e.attr_timeout = 1.0;
   e.entry_timeout = 1.0;
-  e.attr.st_mode = 0444 | (file->type == Fuse::fileInfo::FILE ? S_IFREG : S_IFDIR);
+  e.attr.st_mode = 0755 | (file->type == Fuse::fileInfo::FILE ? S_IFREG : S_IFDIR);
   e.attr.st_nlink = 2;
   e.attr.st_size = file->file_size;
 
@@ -74,6 +74,12 @@ static void manager_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_inf
   elseS_ISREG
     fuse_reply_attr(req, &stbuf, 1.0);
   */
+}
+
+static void manager_opendir(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi) {
+  // TODO: open of dir
+  cerr << "open dir " << ino << endl;
+  fuse_reply_open(req, fi);
 }
 
 static void manager_readdir(fuse_req_t req, fuse_ino_t ino, size_t size_limit, off_t off, struct fuse_file_info *fi) {
@@ -228,6 +234,24 @@ static void manager_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
 
 }
 
+static void manager_statfs(fuse_req_t req, fuse_ino_t ino) {
+  struct statvfs stats = {
+    10000, // fs block size
+    1000, // fs fragment size
+    10, // f_frsize units
+    10, // free blocks
+    0, // free blocks for unprivileged users
+    10, // inodes
+    2, // free inodes
+    0, // free inodes for unprivileged users
+    1232, // fs id
+    0, // mount flags ?
+    1024 // max filename length
+  };
+  fuse_reply_statfs(req, &stats);
+
+}
+
 
 // TODO: do this in a smarter way
 static struct fuse_lowlevel_ops manager_ll_oper = {
@@ -251,11 +275,11 @@ static struct fuse_lowlevel_ops manager_ll_oper = {
   NULL, // flush
   NULL, // release
   NULL, // fsync
-  NULL, // opendir
+  manager_opendir, //NULL, // opendir
   manager_readdir, // readdir
   NULL, // releasedir
   NULL, // fsyncdir
-  NULL, // statfs
+  manager_statfs, //NULL, // statfs
   NULL, // setxattr
   NULL, // getxattr
   NULL, // listxattr

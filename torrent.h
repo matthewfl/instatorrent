@@ -27,6 +27,7 @@ public:
     void alert(int);
     Torrents* parent;
     libtorrent::torrent_handle handle;
+    bool running;
     friend class TorrentFile;
     friend class Torrents;
     friend struct Torrents_alert_handler;
@@ -65,6 +66,10 @@ private:
   std::string target_dir;
   std::string watch_dir;
   bool running = false;
+
+  void Watch();
+
+  std::map<libtorrent::sha1_hash, Torrent*> m_torrents;
 
   // just for testing atm
   Torrent torrent = Torrent(this);

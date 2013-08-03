@@ -26,7 +26,7 @@ CXX= g++
 all: $(TARGET)
 
 release: FLAGS= $(FLAGS_BASE) -s -O2
-release: clean all
+release: all
 
 clean:
 	rm -f $(TARGET) $(OBJ)

@@ -1,0 +1,3 @@
+* running
+** nginx needs to set to run as the same user as the torrent downloader otherwise there are stat filesystem issues
+** if the program crashes, which leaves the directory mounted in a strage state, then nginx will get massive errors
