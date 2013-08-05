@@ -50,6 +50,7 @@ public:
     std::string getHash();
     std::string getTorrentPath();
     Torrents::TorrentFile &getFileHandle();
+    void refreshDir(fuse_req_t req);
   };
 public:
 

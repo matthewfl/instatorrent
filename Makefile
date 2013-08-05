@@ -25,7 +25,8 @@ CXX= g++
 
 all: $(TARGET)
 
-release: FLAGS= $(FLAGS_BASE) -s -O2
+# put back in -s to strip symbols
+release: FLAGS= $(FLAGS_BASE) -O2
 release: all
 
 clean:

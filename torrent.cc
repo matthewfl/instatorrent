@@ -6,6 +6,7 @@
 using namespace std;
 
 #include <dirent.h>
+#include <stdlib.h>
 
 #include <libtorrent/extensions/ut_pex.hpp>
 #include <libtorrent/extensions/metadata_transfer.hpp>
@@ -52,16 +53,23 @@ Torrents::Torrents(char *_target_dir, char *_watch_dir) : target_dir(_target_dir
 }
 
 void Torrents::Configure() {
-  /*
-  session_settings settings = high_performance_seed();
-  settings.announce_to_all_trackers = true;
-  settings.announce_to_all_tiers = true;
-  settings.inactivity_timeout = 90;
-  settings.choking_algorithm = session_settings::bittyrant_choker;
-  settings.max_metadata_size = 4 * 1024 * 1024; // TODO: might up to 8mb
 
-  session.set_settings(settings);
-  // */
+  char *env = getenv("env");
+  if(env && string(env) == "production") {
+    cerr << "Running with production settings\n";
+    session_settings settings = high_performance_seed();
+    settings.announce_to_all_trackers = true;
+    settings.announce_to_all_tiers = true;
+    settings.inactivity_timeout = 90;
+    settings.choking_algorithm = session_settings::bittyrant_choker;
+    settings.max_metadata_size = 4 * 1024 * 1024; // TODO: might up to 8mb
+    settings.share_ratio_limit = 1.3;
+    settings.strict_end_game_mode = false; // allow requesting a piece more than once earlier on
+    settings.seeding_outgoing_connections = false; // do not make out going connections when seeding
+
+    session.set_settings(settings);
+  }
+
 
   session.set_alert_mask(alert::progress_notification | alert::port_mapping_notification |
 			 alert::tracker_notification | alert::status_notification);
@@ -103,12 +111,7 @@ void Torrents::Start() {
     // torrent_status stat = torrent.handle.status();
 
     // cerr << "progress:" << stat.progress << " trac:" << stat.current_tracker << " connected:" << stat.num_peers
-    // 	 << " cons:" << stat.num_connections << " seeds:" << stat.num_seeds <<  endl;
-
-    session_status stats = session.status();
-    cerr << "stats: " << stats.upload_rate << "\t" << stats.download_rate << "\t" << stats.total_download << "\t" << stats.total_upload << "\t"
-	 << stats.num_peers << endl;
-
+    //	 << " cons:" << stat.num_connections << " seeds:" << stat.num_seeds <<	endl;
 
     std::auto_ptr<alert> alert = session.pop_alert();
     while(alert.get()) {
@@ -126,7 +129,7 @@ void Torrents::Start() {
       alert = session.pop_alert();
     }
 
-    sleep(1000); // make this smaller to read the pieces off faster
+    sleep(100); // make this smaller to read the pieces off faster
   }
 
   watch_thread.join();
@@ -140,6 +143,11 @@ void Torrents::Watch () {
   dirent dirEntry;
   dirent *dirResult;
   while(running) {
+    // session status stuff
+    session_status stats = session.status();
+    cerr << "stats: " << stats.upload_rate << "\t" << stats.download_rate << "\t" << stats.total_download << "\t" << stats.total_upload << "\t"
+	 << stats.num_peers << endl;
+
     DIR* dir = opendir(watch_dir.c_str());
     while(true) {
       readdir_r(dir, &dirEntry, &dirResult);
@@ -174,8 +182,8 @@ Torrents::Torrent::Torrent(Torrents* par, torrent_handle hand) : parent(par), ha
   return;
   boost::intrusive_ptr<torrent_info> info(new torrent_info("testing.torrent"));
 
-  add_torrent_params params;                // write fast resume data
-                // ...
+  add_torrent_params params;		    // write fast resume data
+  // ...
   params.ti = info;
   params.save_path = parent->target_dir + "/" + to_hex(info->info_hash().to_string());
   params.storage_mode = storage_mode_allocate;
@@ -189,7 +197,7 @@ Torrents::Torrent::Torrent(Torrents* par, torrent_handle hand) : parent(par), ha
 Torrents::Torrent* Torrents::lookupTorrent(std::string hash) {
   assert(hash.size() == 40);
   sha1_hash sha;
-  from_hex(hash.c_str(), 40, (char*)sha[0]);
+  from_hex(hash.c_str(), 40, (char*)&sha[0]);
   auto tor = m_torrents.find(sha);
   if(tor == m_torrents.end()) return NULL;
   return tor->second;
@@ -237,13 +245,13 @@ void Torrents::TorrentFile::get(size_t offset, size_t length, std::function<void
   *count = end_block - start_block;
 
   function<void(int)> func = [callback, offset, length, count](int block) -> void{
-	cerr << "!!!!!!!!!!!!!!!!! callback: " << block << endl;
-	if(*count == 0) {
-	  callback(offset, length);
-	  delete count;
-	  return;
-	}
-	(*count)--;
+    cerr << "!!!!!!!!!!!!!!!!! callback: " << block << endl;
+    if(*count == 0) {
+      callback(offset, length);
+      delete count;
+      return;
+    }
+    (*count)--;
   };
 
   for(int block = start_block; block <= end_block; block++) {

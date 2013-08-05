@@ -24,15 +24,21 @@ static void manager_lookup(fuse_req_t req, fuse_ino_t parent_ino, const char *na
   auto inter = parent->files.find(name);
   if(inter == parent->files.end()) {
     // TODO: need to refresh the dir listing here
-    fuse_reply_err(req, ENOENT);
-    return;
+    parent->refreshDir(req);
+    inter = parent->files.find(name);
+    if(inter == parent->files.end()) {
+      fuse_reply_err(req, ENOENT);
+      return;
+    }
   }
-
+  assert(inter->second);
   Fuse::fileInfo *file = inter->second;
+  /*
   if(!file) {
     fuse_reply_err(req, ENOENT);
     return;
   }
+  */
 
   cerr << "--lookup " << file->name << " " << file->type << endl;
 
@@ -69,9 +75,9 @@ static void manager_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_inf
   fuse_reply_attr(req, &stbuf, 1.0);
 
   /*
-  if (hello_stat(ino, &stbuf) == -1)
+    if (hello_stat(ino, &stbuf) == -1)
     fuse_reply_err(req, ENOENT);
-  elseS_ISREG
+    elseS_ISREG
     fuse_reply_attr(req, &stbuf, 1.0);
   */
 }
@@ -79,6 +85,10 @@ static void manager_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_inf
 static void manager_opendir(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi) {
   // TODO: open of dir
   cerr << "open dir " << ino << endl;
+  Fuse::fileInfo *dir = Fuse_manager->lookupInode(ino);
+
+  dir->refreshDir(req);
+
   fuse_reply_open(req, fi);
 }
 
@@ -91,76 +101,7 @@ static void manager_readdir(fuse_req_t req, fuse_ino_t ino, size_t size_limit, o
   assert(dir);
 
   // TODO: move this into opendir
-  if(off == 0) {
-    // refresh the files list
-    size_t bytes = 0;
-    dirent dirEntry;
-    dirent *dirResult;
 
-    cerr << "before lock";
-    dir->lock.lock();
-    cerr << "after lock";
-    for(auto it : dir->files) {
-      it.second->access = false;
-    }
-    DIR* handle = dir->openDir();
-    while(true) {
-      cerr << '.';
-      readdir_r(handle, &dirEntry, &dirResult);
-      if(!dirResult) break;
-      if(dirEntry.d_name[0] == '.') continue; // no hidden files
-      cerr << "\t\t adding: " << dirEntry.d_name << endl;
-      bytes += fuse_add_direntry(req, NULL, 0, dirEntry.d_name, NULL, 0);
-      Fuse::fileInfo *child = dir->files[dirEntry.d_name];
-      if(!child) {
-	child = dir->files[dirEntry.d_name] = Fuse_manager->newInode(dir);
-	child->name = dirEntry.d_name;
-      }else{
-	child->access = true;
-      }
-      cerr << "\n looking at " << dirEntry.d_name << " type:" << (int)dirEntry.d_type;
-      child->type = dirEntry.d_type == DT_DIR ? Fuse::fileInfo::DIRECTORY : Fuse::fileInfo::FILE;
-
-      if(child->type == Fuse::fileInfo::FILE) {
-	struct stat stats;
-	stat(child->getPath().c_str(), &stats);
-	child->file_size = stats.st_size;
-      }
-    }
-    closedir(handle);
-    // deleting stuff with iterators can lead to issues
-    for(auto it : dir->files) {
-      if(it.second->access == false) {
-	// delete
-	// TODO: delete things that it can no longer find
-      }
-    }
-    bytes += fuse_add_direntry(req, NULL, 0, ".", NULL, 0);
-    bytes += fuse_add_direntry(req, NULL, 0, "..", NULL, 0);
-
-    delete dir->dirEntryData;
-    dir->dirEntryData = new char[bytes];
-    dir->dirEntryData_size = bytes;
-
-    struct stat stbuf;
-    memset(&stbuf, 0, sizeof(stbuf));
-    stbuf.st_ino = dir->inode; //dirEntry.d_ino + 15;
-    stbuf.st_mode = 0444 | S_IFDIR; // dirEntry.d_type == DT_DIR ? S_IFDIR : S_IFREG;
-
-    size_t at = 0;
-    at = fuse_add_direntry(req, dir->dirEntryData, bytes, ".", &stbuf, bytes);
-    stbuf.st_ino = dir->parent ? dir->parent->inode : 1;
-    at = fuse_add_direntry(req, dir->dirEntryData + at, bytes, "..", &stbuf, bytes);
-    for(auto it : dir->files) {
-      if(it.second->access) { // TODO: take this out
-	stbuf.st_ino = it.second->inode;
-	stbuf.st_mode = 0444 | it.second->type == Fuse::fileInfo::FILE ? S_IFREG : S_IFDIR;
-	at += fuse_add_direntry(req, dir->dirEntryData + at, bytes, it.second->name.c_str(), &stbuf, bytes);
-      }
-    }
-
-    dir->lock.unlock();
-  }
 
 
   size_t ret_size = dir->dirEntryData_size - off;
@@ -403,6 +344,80 @@ std::string Fuse::fileInfo::getTorrentPath() {
     return "";
   }
   return parent->getTorrentPath() + "/" + name;
+}
+
+
+void Fuse::fileInfo::refreshDir(fuse_req_t req) {
+  fileInfo *dir = this;
+
+  // refresh the files list
+  size_t bytes = 0;
+  dirent dirEntry;
+  dirent *dirResult;
+
+  cerr << "before lock";
+  dir->lock.lock();
+  cerr << "after lock";
+  for(auto it : dir->files) {
+    it.second->access = false;
+  }
+  DIR* handle = dir->openDir();
+  while(true) {
+    cerr << '.';
+    readdir_r(handle, &dirEntry, &dirResult);
+    if(!dirResult) break;
+    if(dirEntry.d_name[0] == '.') continue; // no hidden files
+    cerr << "\t\t adding: " << dirEntry.d_name << endl;
+    bytes += fuse_add_direntry(req, NULL, 0, dirEntry.d_name, NULL, 0);
+    Fuse::fileInfo *child = dir->files[dirEntry.d_name];
+    if(!child) {
+      child = dir->files[dirEntry.d_name] = Fuse_manager->newInode(dir);
+      child->name = dirEntry.d_name;
+    }else{
+      child->access = true;
+    }
+    cerr << "\n looking at " << dirEntry.d_name << " type:" << (int)dirEntry.d_type;
+    child->type = dirEntry.d_type == DT_DIR ? Fuse::fileInfo::DIRECTORY : Fuse::fileInfo::FILE;
+
+    if(child->type == Fuse::fileInfo::FILE) {
+      struct stat stats;
+      stat(child->getPath().c_str(), &stats);
+      child->file_size = stats.st_size;
+    }
+  }
+  closedir(handle);
+  // deleting stuff with iterators can lead to issues
+  for(auto it : dir->files) {
+    if(it.second->access == false) {
+      // delete
+      // TODO: delete things that it can no longer find
+    }
+  }
+  bytes += fuse_add_direntry(req, NULL, 0, ".", NULL, 0);
+  bytes += fuse_add_direntry(req, NULL, 0, "..", NULL, 0);
+
+  delete dir->dirEntryData;
+  dir->dirEntryData = new char[bytes];
+  dir->dirEntryData_size = bytes;
+
+  struct stat stbuf;
+  memset(&stbuf, 0, sizeof(stbuf));
+  stbuf.st_ino = dir->inode; //dirEntry.d_ino + 15;
+  stbuf.st_mode = 0444 | S_IFDIR; // dirEntry.d_type == DT_DIR ? S_IFDIR : S_IFREG;
+
+  size_t at = 0;
+  at = fuse_add_direntry(req, dir->dirEntryData, bytes, ".", &stbuf, bytes);
+  stbuf.st_ino = dir->parent ? dir->parent->inode : 1;
+  at = fuse_add_direntry(req, dir->dirEntryData + at, bytes, "..", &stbuf, bytes);
+  for(auto it : dir->files) {
+    if(it.second->access) { // TODO: take this out
+      stbuf.st_ino = it.second->inode;
+      stbuf.st_mode = 0444 | it.second->type == Fuse::fileInfo::FILE ? S_IFREG : S_IFDIR;
+      at += fuse_add_direntry(req, dir->dirEntryData + at, bytes, it.second->name.c_str(), &stbuf, bytes);
+    }
+  }
+
+  dir->lock.unlock();
 }
 
 
