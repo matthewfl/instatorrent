@@ -430,5 +430,6 @@ Torrents::TorrentFile &Fuse::fileInfo::getFileHandle() {
     return Torrents::EmptyTorrentFile;
   //assert(handle); // TODO: something that is not assert
   torrent = handle->lookupFile(getTorrentPath());
+  assert(torrent);
   return *torrent;
 }

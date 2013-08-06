@@ -207,17 +207,29 @@ Torrents::Torrent* Torrents::lookupTorrent(std::string hash) {
 
 
 Torrents::TorrentFile *Torrents::Torrent::lookupFile(std::string name) {
+  name.erase(0,1); // remove first /
   cerr << "=================" << name << endl;
   const libtorrent::torrent_info &info = handle.get_torrent_info();
+  //const libtorrent::file_storage &files = info.files();
+  for(int i=0,len=info.num_files(); i < len; i++) {
+    const file_entry file = info.file_at(i);
+    cerr << "it file --- " << file.path << " " << file.size << " " << file.offset << endl;
+    if(file.path == name) {
+      return new TorrentFile(this, info.piece_length(), file.offset, file.size);
+    }
+  }
+  /*
   for(auto it = info.begin_files(), end = info.end_files(); it != end; it++) {
     string itname = "/";
     itname += it->filename();
-    cerr << "it file --- " << itname << " " << it->offset << " " << it->size << endl;
+    // TODO: change this to be path based
+    cerr << "it file --- " << itname << " " << it->offset << " " << it->size << it->path << endl;
     // should just make this not return a pointer
     if(itname == name) {
       return new TorrentFile(this, info.piece_length(), it->offset, it->size);
     }
-  }
+    }*/
+
   return NULL;
 }
 
