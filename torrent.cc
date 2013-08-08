@@ -57,15 +57,20 @@ void Torrents::Configure() {
   char *env = getenv("env");
   if(env && string(env) == "production") {
     cerr << "Running with production settings\n";
-    session_settings settings = high_performance_seed();
+    session_settings settings;// = high_performance_seed();
     settings.announce_to_all_trackers = true;
     settings.announce_to_all_tiers = true;
-    settings.inactivity_timeout = 90;
+    settings.inactivity_timeout = 90; // disconnect peers after 90 sec if now activity
     settings.choking_algorithm = session_settings::bittyrant_choker;
     settings.max_metadata_size = 4 * 1024 * 1024; // TODO: might up to 8mb
     settings.share_ratio_limit = 1.3;
     settings.strict_end_game_mode = false; // allow requesting a piece more than once earlier on
     settings.seeding_outgoing_connections = false; // do not make out going connections when seeding
+    settings.request_queue_time = 4.5; // the number of second for a connection to send all pieces, might be too low
+    settings.connection_speed = 50;
+    settings.mixed_mode_algorithm = session_settings::prefer_tcp; // no throttle TCP
+    settings.no_atime_storage = true;
+    settings.read_job_every = 300;
 
     session.set_settings(settings);
   }
@@ -178,19 +183,12 @@ void Torrents::Watch () {
 }
 
 Torrents::Torrent::Torrent(Torrents* par, torrent_handle hand) : parent(par), handle(hand) {
-  //torrent_info info("testing.torrent");
-  return;
-  boost::intrusive_ptr<torrent_info> info(new torrent_info("testing.torrent"));
-
-  add_torrent_params params;		    // write fast resume data
-  // ...
-  params.ti = info;
-  params.save_path = parent->target_dir + "/" + to_hex(info->info_hash().to_string());
-  params.storage_mode = storage_mode_allocate;
-  handle = parent->session.add_torrent(params);
-
-  cerr << "adding torrent " << info->name() << " size:" << info->total_size() << endl;
-
+  //handle.set_sequential_download(true); // this is shit, never use
+  // this appears to do nothing
+  torrent_status stat = handle.status();
+  for(int i = 0; i < 50 && i < stat.num_pieces; i++) {
+    handle.set_piece_deadline(i, 10000 + i * 100);
+  }
 }
 
 
@@ -201,8 +199,6 @@ Torrents::Torrent* Torrents::lookupTorrent(std::string hash) {
   auto tor = m_torrents.find(sha);
   if(tor == m_torrents.end()) return NULL;
   return tor->second;
-
-  //  return &torrent; // currently only one torrent
 }
 
 
@@ -215,6 +211,7 @@ Torrents::TorrentFile *Torrents::Torrent::lookupFile(std::string name) {
     const file_entry file = info.file_at(i);
     cerr << "it file --- " << file.path << " " << file.size << " " << file.offset << endl;
     if(file.path == name) {
+      handle.file_priority(i, 2); // increases this files priority
       return new TorrentFile(this, info.piece_length(), file.offset, file.size);
     }
   }
@@ -255,6 +252,8 @@ void Torrents::TorrentFile::get(size_t offset, size_t length, std::function<void
   // if we capture the variable then it will reference to the location on the stack
   int *count = new int;
   *count = end_block - start_block;
+
+  // potential race condition between adding the callback and the piece getting downloaded
 
   function<void(int)> func = [callback, offset, length, count](int block) -> void{
     cerr << "!!!!!!!!!!!!!!!!! callback: " << block << endl;

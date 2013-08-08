@@ -34,7 +34,7 @@ struct Magnet_alert_handler {
 	fclose(f);
       }
     }
-    magnet->session.remove_torrent(h);
+    magnet->session.remove_torrent(h, session::delete_files);
     cerr << "done with: " << hash << endl;
   }
 
