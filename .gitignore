@@ -1,3 +1,4 @@
 *.o
 tor-runner
 Makefile.bak
+logs

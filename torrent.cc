@@ -115,6 +115,7 @@ void Torrents::Start() {
     // TODO: make these global stats
     // torrent_status stat = torrent.handle.status();
 
+
     // cerr << "progress:" << stat.progress << " trac:" << stat.current_tracker << " connected:" << stat.num_peers
     //	 << " cons:" << stat.num_connections << " seeds:" << stat.num_seeds <<	endl;
 
@@ -133,7 +134,17 @@ void Torrents::Start() {
       }
       alert = session.pop_alert();
     }
-
+    for(auto it : m_torrents) {
+      for(auto waits : it.second->m_alertCallbacks) {
+	if(it.second->handle.have_piece(waits.first)) {
+	  // fml basically it is double checking
+	  // fixing a race condition etc
+	  // aka, a nasty hack
+	  it.second->alert(waits.first);
+	  //assert(0);
+	}
+      }
+    }
     sleep(100); // make this smaller to read the pieces off faster
   }
 
