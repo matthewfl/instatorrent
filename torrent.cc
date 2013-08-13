@@ -36,6 +36,10 @@ struct Torrents_alert_handler {
   void operator()(torrent_finished_alert const &a) const {
     std::cerr << a.handle.get_torrent_info().name() << " completed"
 	      << std::endl;
+    // delete the torrent from the watch dir
+    if( 0 == remove( (torrents->watch_dir + a.handle.info_hash().to_string() + ".torrent").c_str() ) ) {
+      cerr << "deleted torrent file\n";
+    }
   }
 
   void operator()(piece_finished_alert const &a) const {
@@ -71,6 +75,14 @@ void Torrents::Configure() {
     settings.mixed_mode_algorithm = session_settings::prefer_tcp; // no throttle TCP
     settings.no_atime_storage = true;
     settings.read_job_every = 300;
+    settings.active_downloads = 20;
+    settings.active_seeds = 20;
+    settings.active_limit = 30;
+    settings.connections_limit = 1500;
+    settings.rate_limit_utp = false;
+    settings.torrent_connect_boost = 25;
+    settings.drop_skipped_requests = true;
+    settings.seed_time_limit = 15 * 60 * 60;
 
     session.set_settings(settings);
   }
@@ -196,12 +208,26 @@ void Torrents::Watch () {
 Torrents::Torrent::Torrent(Torrents* par, torrent_handle hand) : parent(par), handle(hand) {
   //handle.set_sequential_download(true); // this is shit, never use
   // this appears to do nothing
-  torrent_status stat = handle.status();
-  for(int i = 0; i < 50 && i < stat.num_pieces; i++) {
-    handle.set_piece_deadline(i, 10000 + i * 100);
-  }
+  // torrent_status stat = handle.status();
+  // for(int i = 0; i < 50 && i < stat.num_pieces; i++) {
+  //   handle.set_piece_deadline(i, 10000 + i * 100);
+  // }
+  //handle.piece_priority(0, 7);
+  preFetch(0);
 }
 
+void Torrents::Torrent::preFetch(int from) {
+  if(m_lastRead <= from && m_currentWorking >= from) {
+    m_lastRead = from;
+    return;
+  }
+  m_lastRead = m_currentWorking = from;
+  for(int pieces = handle.get_torrent_info().num_pieces();
+      handle.have_piece(m_currentWorking) && m_currentWorking < pieces;
+      m_currentWorking++);
+  handle.piece_priority(m_currentWorking, 7);
+  cerr << "******* prefetch:" << m_currentWorking << endl;
+}
 
 Torrents::Torrent* Torrents::lookupTorrent(std::string hash) {
   assert(hash.size() == 40);
@@ -247,6 +273,9 @@ void Torrents::Torrent::alert(int index) {
     it->second(index);
   }
   m_alertCallbacks.erase(msg.first, msg.second);
+  if(index == m_currentWorking) {
+    handle.piece_priority(++m_currentWorking, 7);
+  }
 }
 
 void Torrents::TorrentFile::get(size_t offset, size_t length, std::function<void(size_t, size_t)> callback) {
@@ -297,6 +326,7 @@ bool Torrents::TorrentFile::has(size_t offset, size_t length) {
     if(!m_parent->handle.have_piece(start_block))
       return false;
   }
+  m_parent->preFetch(end_block+1);
   return true;
   //return m_parent->handle.have_piece(start_block);
   // parent->handle.have_piece()

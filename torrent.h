@@ -31,6 +31,9 @@ public:
     friend class TorrentFile;
     friend class Torrents;
     friend struct Torrents_alert_handler;
+    int m_lastRead = -1;
+    int m_currentWorking = -1;
+    void preFetch(int from);
   };
 
   class TorrentFile {
