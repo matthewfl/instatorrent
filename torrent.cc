@@ -37,8 +37,11 @@ struct Torrents_alert_handler {
     std::cerr << a.handle.get_torrent_info().name() << " completed"
 	      << std::endl;
     // delete the torrent from the watch dir
-    if( 0 == remove( (torrents->watch_dir + a.handle.info_hash().to_string() + ".torrent").c_str() ) ) {
+    string fname = (torrents->watch_dir + "/" + to_hex(a.handle.info_hash().to_string()) + ".torrent");
+    if( 0 == remove( fname.c_str() ) ) {
       cerr << "deleted torrent file\n";
+    }else{
+      cerr << "could not delete torrent file: " << fname << endl;
     }
   }
 
@@ -185,7 +188,7 @@ void Torrents::Watch () {
       try {
 	info = new torrent_info(watch_dir + "/" + dirEntry.d_name);
       } catch(libtorrent_exception e) {
-	cerr << "watch dir " << e.what() << endl;
+	cerr << "watch dir (" << dirEntry.d_name << ") " << e.what() << endl;
 	continue;
       }
       if(m_torrents.find(info->info_hash()) == m_torrents.end()) {
@@ -248,7 +251,7 @@ Torrents::TorrentFile *Torrents::Torrent::lookupFile(std::string name) {
     const file_entry file = info.file_at(i);
     cerr << "it file --- " << file.path << " " << file.size << " " << file.offset << endl;
     if(file.path == name) {
-      handle.file_priority(i, 2); // increases this files priority
+      if(len != 1) handle.file_priority(i, 2); // increases this files priority
       return new TorrentFile(this, info.piece_length(), file.offset, file.size);
     }
   }
@@ -309,11 +312,14 @@ void Torrents::TorrentFile::get(size_t offset, size_t length, std::function<void
     m_parent->m_alertCallbacks.insert(pair<int, function<void(int)>>(block, func));
   }
 
+  m_parent->preFetch(end_block);
+
   for(int block = start_block; block <= end_block; block++) {
     m_parent->handle.piece_priority(block, 7);
   }
 
   cerr << "@@@@@@@@@@@ requesting: " << start_block << ".." << end_block << endl;
+
 }
 
 bool Torrents::TorrentFile::has(size_t offset, size_t length) {
