@@ -40,7 +40,7 @@ struct Magnet_alert_handler {
 
 };
 
-Magnet::Magnet (char *dir) : Torrents(dir, "") {
+Magnet::Magnet (char *dir) : Torrents(dir, dir) {
   // read from stdin
   path = dir;
   path += '/';

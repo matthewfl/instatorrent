@@ -277,7 +277,12 @@ void Torrents::Torrent::alert(int index) {
   }
   m_alertCallbacks.erase(msg.first, msg.second);
   if(index == m_currentWorking) {
-    handle.piece_priority(++m_currentWorking, 7);
+    m_currentWorking++;
+    for(int pieces = handle.get_torrent_info().num_pieces();
+	handle.have_piece(m_currentWorking) && m_currentWorking < pieces;
+	m_currentWorking++);
+    handle.piece_priority(m_currentWorking, 7);
+    cerr << "******* prefetch:" << m_currentWorking << endl;
   }
 }
 
