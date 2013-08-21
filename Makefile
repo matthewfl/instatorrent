@@ -21,7 +21,7 @@ LIB= ./deps/lib/libtorrent-rasterbar.a -lboost_system -lssl -lcrypto $(shell PKG
 LD= g++
 CXX= g++
 
-.PHONY: all clean
+.PHONY: all clean release _dir run debug
 
 all: $(TARGET)
 
@@ -55,11 +55,11 @@ $(TARGET): $(TORRENT) $(OBJ)
 	$(CXX) $(FLAGS) $(INCLUDE) -o $@ -c $<
 
 
-$(TORRENT): $(wildcard lib/libtorrent/include/*)
-	cd deps/libtorrent && ./configure --prefix=`pwd`/../ --disable-geoip
+$(TORRENT): $(wildcard deps/libtorrent/include/*)# $(wildcard deps/libtorrent/src/*)
+	cd deps/libtorrent && ./configure --enable-debug=yes --prefix=`pwd`/../ --disable-geoip
 	cd deps/libtorrent && make V=1
 	cd deps/libtorrent && make install
-	cd deps/libtorrent && make clean
+#cd deps/libtorrent && make clean
 
 
 depend:

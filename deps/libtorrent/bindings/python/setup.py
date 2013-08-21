@@ -64,7 +64,7 @@ if "OPT" in config_vars and "-Wstrict-prototypes" in config_vars["OPT"]:
 source_list = os.listdir(os.path.join(os.path.dirname(__file__), "src"))
 source_list = [os.path.join("src", s) for s in source_list if s.endswith(".cpp")]
 
-extra_cmd = ' -DTORRENT_USE_OPENSSL  -DTORRENT_DISABLE_GEO_IP  -DBOOST_ASIO_HASH_MAP_BUCKETS=1021  -DBOOST_EXCEPTION_DISABLE  -DBOOST_ASIO_ENABLE_CANCELIO  -DBOOST_ASIO_DYN_LINK -DTORRENT_LINKING_SHARED  -I/usr/include  -lpthread   -lboost_system  -lpthread  -lssl -lcrypto   '
+extra_cmd = ' -DTORRENT_DEBUG  -DTORRENT_USE_OPENSSL  -DTORRENT_DISABLE_GEO_IP  -DBOOST_ASIO_HASH_MAP_BUCKETS=1021  -DBOOST_EXCEPTION_DISABLE  -DBOOST_ASIO_ENABLE_CANCELIO  -DBOOST_ASIO_DYN_LINK -DTORRENT_LINKING_SHARED  -I/usr/include  -lpthread   -lboost_system  -lpthread  -lssl -lcrypto   '
 
 setup( name='python-libtorrent',
 	version='0.16.10',

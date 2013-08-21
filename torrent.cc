@@ -127,13 +127,6 @@ void Torrents::Start() {
     });
 
   while(running) {
-    // TODO: make these global stats
-    // torrent_status stat = torrent.handle.status();
-
-
-    // cerr << "progress:" << stat.progress << " trac:" << stat.current_tracker << " connected:" << stat.num_peers
-    //	 << " cons:" << stat.num_connections << " seeds:" << stat.num_seeds <<	endl;
-
     std::auto_ptr<alert> alert = session.pop_alert();
     while(alert.get()) {
       try {

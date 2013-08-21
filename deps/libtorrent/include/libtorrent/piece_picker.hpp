@@ -32,6 +32,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_PIECE_PICKER_HPP_INCLUDED
 #define TORRENT_PIECE_PICKER_HPP_INCLUDED
 
+#ifdef TORRENT_DEBUG
+#define TORRENT_PICKER_LOG
+#endif
+
 #include <algorithm>
 #include <vector>
 #include <bitset>
@@ -132,7 +136,7 @@ namespace libtorrent
 
 		enum options_t
 		{
-			// pick rarest first 
+			// pick rarest first
 			rarest_first = 1,
 			// pick the most common first, or the last pieces if sequential
 			reverse = 2,
@@ -170,7 +174,7 @@ namespace libtorrent
 			// the number of blocks in the requested state
 			boost::int16_t requested;
 		};
-		
+
 		piece_picker();
 
 		void get_availability(std::vector<int>& avail) const;
@@ -186,7 +190,7 @@ namespace libtorrent
 		// decreases the peer count for the given piece
 		// (used when a peer disconnects)
 		void dec_refcount(bitfield const& bitmask);
-		
+
 		// these will increase and decrease the peer count
 		// of all pieces. They are used when seeds join
 		// or leave the swarm.
@@ -412,7 +416,7 @@ namespace libtorrent
 			// 4 is higher priority than partial pieces
 			// 5 and 6 same priority as availability 1 (ignores availability)
 			// 7 is maximum priority (ignores availability)
-			boost::uint32_t piece_priority : 3;
+			boost::uint32_t piece_priority : 4;
 			// index in to the piece_info vector
 #if TORRENT_COMPACT_PICKER
 			boost::uint32_t index : 18;
@@ -439,13 +443,13 @@ namespace libtorrent
 				max_peer_count = 0xffff
 #endif
 			};
-			
+
 			bool have() const { return index == we_have_index; }
 			void set_have() { index = we_have_index; TORRENT_ASSERT(have()); }
 			void set_not_have() { index = 0; TORRENT_ASSERT(!have()); }
-			
+
 			bool filtered() const { return piece_priority == filter_priority; }
-			
+
 			//  prio 7 is always top priority
 			//  prio 0 is always -1 (don't pick)
 			//  downloading pieces are always on an even prio_factor priority
@@ -582,7 +586,7 @@ namespace libtorrent
 
 		// the number of pieces we have that also are filtered
 		int m_num_have_filtered;
-		
+
 		// the number of pieces we have
 		int m_num_have;
 
@@ -614,4 +618,3 @@ namespace libtorrent
 }
 
 #endif // TORRENT_PIECE_PICKER_HPP_INCLUDED
-

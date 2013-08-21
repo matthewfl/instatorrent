@@ -64,6 +64,9 @@ void Magnet::Start() {
       cerr << "problem adding torrent: " << link << endl;
       continue;
     }
+    // should not be able to create files here so this should
+    // fail which is what we want
+    params.save_path = "/";
     session.add_torrent(params);
 
   }
